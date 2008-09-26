@@ -1,0 +1,70 @@
+#!/bin/sh
+
+
+#
+# helpers
+#
+clean_symlink_tree() {
+    if [ ! -d "$1" ]; then
+	return
+    fi
+    if [ `find "$1" ! -type l -a ! -type d | wc -l` -ne 0 ]; then
+	echo "tree $1 is dirty, aborting"
+	exit 1
+    fi
+    rm -rf "$1"
+}
+
+#
+# implementation specific routines
+#
+
+setup_target_ikarus() {
+    clean_symlink_tree "targets/ikarus"
+    (   echo "("
+	for system in systems/*; do
+	    find "$system" -name "*.sls" -printf "(\"${system}\""' "%p")\n'
+	done
+	echo ")"
+    ) | ikarus --r6rs-script scripts/ikarus-setup.scm | while read source dest; do
+	dest=`echo "$dest" | sed 's,^,targets/ikarus/,g'`
+	mkdir -p `dirname $dest`
+	ln -s "$source" "$dest"
+    done
+}
+
+launch_ikarus() {
+    cd targets/ikarus && rlwrap ikarus "$@"
+}
+
+#
+# main body follows
+#
+
+impl="$1"
+if [ -z "$impl" ]; then
+    echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
+    exit 1
+fi
+
+case "$impl" in
+    ikarus)
+	setup=setup_target_ikarus
+	launch=launch_ikarus
+	;;
+    *) 
+	echo "Unsupported implementation $impl; patches welcome"
+	exit 1
+	;;
+esac
+shift
+
+set -e
+
+[ -d "targets/$impl" ] || mkdir "targets/$impl"
+
+if [ `ls systems | wc -l` -ne 0 ]; then
+    $setup
+fi
+
+$launch "$@"
