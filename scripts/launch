@@ -49,7 +49,11 @@ setup() {
 
 launch_ikarus() {
     setup "targets/ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
-    cd targets/ikarus && rlwrap ikarus "$@"
+    if [ $# -eq 0 ]; then
+	cd targets/ikarus && rlwrap ikarus
+    else
+	cd targets/ikarus && ikarus --r6rs-script "$@"
+    fi
 }
 
 launch_larceny() {
