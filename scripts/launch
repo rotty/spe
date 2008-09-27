@@ -4,37 +4,71 @@
 #
 # helpers
 #
+
 clean_symlink_tree() {
     if [ ! -d "$1" ]; then
 	return
     fi
-    if [ `find "$1" ! -type l -a ! -type d | wc -l` -ne 0 ]; then
-	echo "tree $1 is dirty, aborting"
+    dir="$1"; shift
+    args=""
+    while [ -n "$1" ]; do
+	args="$args -a ! -name $1"; shift
+    done
+    findcmd="find $dir ! -type l -a ! -type d $args"
+    if [ `$findcmd | tee ,log | wc -l` -ne 0 ]; then
+	echo "tree $dir is dirty, aborting"
 	exit 1
     fi
-    rm -rf "$1"
+    rm -rf "$dir"
+}
+
+setup_no_symlinks() {
+    program="$1"; shift
+    (   echo "("
+	for system in systems/*; do
+	    find "$system" -name "*.sls" -a ! -path "*/_darcs/*" -printf "(\"${system}\""' "%p")\n'
+	done
+	echo ")"
+    ) | $program "$@"
+}
+
+setup() {
+    target_dir="$1"
+    shift
+    clean_symlink_tree "$target_dir" "*.slfasl"
+    setup_no_symlinks "$@" | while read source dest; do
+	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
+	mkdir -p `dirname $dest`
+	ln -s "$source" "$dest"
+    done
 }
 
 #
 # implementation specific routines
 #
 
-setup_target_ikarus() {
-    clean_symlink_tree "targets/ikarus"
-    (   echo "("
-	for system in systems/*; do
-	    find "$system" -name "*.sls" -printf "(\"${system}\""' "%p")\n'
-	done
-	echo ")"
-    ) | ikarus --r6rs-script scripts/ikarus-setup.scm | while read source dest; do
-	dest=`echo "$dest" | sed 's,^,targets/ikarus/,g'`
-	mkdir -p `dirname $dest`
-	ln -s "$source" "$dest"
-    done
+launch_ikarus() {
+    setup "targets/ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
+    cd targets/ikarus && rlwrap ikarus "$@"
 }
 
-launch_ikarus() {
-    cd targets/ikarus && rlwrap ikarus "$@"
+launch_larceny() {
+    setup_cmd="larceny -r6rs -path . -program scripts/setup.scm"
+    if [ $# -eq 0 ]; then
+	setup targets/larceny "$setup_cmd" -- symlinks
+	cd targets/larceny && rlwrap larceny -path . -err5rs
+    elif [ "$1" = compile ]; then
+	setup targets/larceny "$setup_cmd" -- symlinks
+	setup_no_symlinks larceny -r6rs -path . -program scripts/setup.scm \
+	    -- compile targets/larceny "(spe boot filesys) (larceny compiler)"
+    elif [ "$1" = run ]; then
+	shift
+	if [ $# -eq 0 ]; then
+	    cd targets/larceny && rlwrap larceny -path . -err5rs
+	else
+	    cd targets/larceny && larceny -path . -r6rs -program "$@"
+	fi
+    fi
 }
 
 #
@@ -49,8 +83,10 @@ fi
 
 case "$impl" in
     ikarus)
-	setup=setup_target_ikarus
 	launch=launch_ikarus
+	;;
+    larceny)
+	launch=launch_larceny
 	;;
     *) 
 	echo "Unsupported implementation $impl; patches welcome"
