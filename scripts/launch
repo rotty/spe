@@ -1,6 +1,5 @@
 #!/bin/sh
 
-
 #
 # helpers
 #
@@ -15,7 +14,7 @@ clean_symlink_tree() {
 	args="$args -a ! -name $1"; shift
     done
     findcmd="find $dir ! -type l -a ! -type d $args"
-    if [ `$findcmd | tee ,log | wc -l` -ne 0 ]; then
+    if [ `$findcmd | wc -l` -ne 0 ]; then
 	echo "tree $dir is dirty, aborting"
 	exit 1
     fi
@@ -23,22 +22,29 @@ clean_symlink_tree() {
 }
 
 setup_no_symlinks() {
+    impl="$1"; shift
     program="$1"; shift
-    (   echo "("
-	for system in systems/*; do
-	    find "$system" -name "*.sls" -a ! -path "*/_darcs/*" -printf "(\"${system}\""' "%p")\n'
-	done
-	echo ")"
-    ) | $program "$@"
+    find systems -type f | awk -f scripts/build-liblist.awk -- $impl | $program "$@"
 }
 
 setup() {
-    target_dir="$1"
+    impl="$1"
+    target_dir="targets/$impl"
     shift
     clean_symlink_tree "$target_dir" "*.slfasl"
-    setup_no_symlinks "$@" | while read source dest; do
+    setup_no_symlinks $impl "$@" | while read source dest; do
 	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
-	mkdir -p `dirname $dest`
+	if echo "$dest" | grep -q "\.sls$"; then
+	    source_noext=`echo "$source" | sed "s,\.sls$,,g"`
+	    for ext in ."$impl".sls .sls; do
+		source="${source_noext}${ext}"
+		if [ -f "$source" ]; then
+		    echo "$source"
+		    break
+		fi
+	    done
+	fi
+	mkdir -p `dirname "$dest"`
 	ln -s "$source" "$dest"
     done
 }
@@ -48,7 +54,7 @@ setup() {
 #
 
 launch_ikarus() {
-    setup "targets/ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
+    setup "ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
     if [ $# -eq 0 ]; then
 	cd targets/ikarus && rlwrap ikarus
     else
@@ -59,11 +65,13 @@ launch_ikarus() {
 launch_larceny() {
     setup_cmd="larceny -r6rs -path . -program scripts/setup.scm"
     if [ $# -eq 0 ]; then
-	setup targets/larceny "$setup_cmd" -- symlinks
+	setup larceny "$setup_cmd" -- symlinks
 	cd targets/larceny && rlwrap larceny -path . -err5rs
+    elif [ "$1" = symlink ]; then
+	setup larceny "$setup_cmd" -- symlinks
     elif [ "$1" = compile ]; then
-	setup targets/larceny "$setup_cmd" -- symlinks
-	setup_no_symlinks larceny -r6rs -path . -program scripts/setup.scm \
+	setup larceny "$setup_cmd" -- symlinks
+	setup_no_symlinks larceny larceny -r6rs -path . -program scripts/setup.scm \
 	    -- compile targets/larceny "(spe boot filesys) (larceny compiler)"
     elif [ "$1" = run ]; then
 	shift
@@ -72,6 +80,8 @@ launch_larceny() {
 	else
 	    cd targets/larceny && larceny -path . -r6rs -program "$@"
 	fi
+    else
+	cd targets/larceny && larceny -path . -r6rs -program "$@"
     fi
 }
 
@@ -102,9 +112,5 @@ shift
 set -e
 
 [ -d "targets/$impl" ] || mkdir "targets/$impl"
-
-if [ `ls systems | wc -l` -ne 0 ]; then
-    $setup
-fi
 
 $launch "$@"

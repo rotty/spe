@@ -30,10 +30,10 @@
                             filename
                             #\newline))))
 
-(define (library-symlink-lister sys-path lib-name form)
+(define (library-symlink-lister sys-path filename lib-name form)
   (for-each display (list (make-link-target sys-path
                                             (length lib-name)
-                                            (string-append "libraries/" (libname->path lib-name)))
+                                            filename)
                           " "
                           (libname->path lib-name)
                           #\newline)))
@@ -41,7 +41,7 @@
 (define (make-library-compiler target-dir import-specs)
   (let ((compiled-libraries '())
         (env (apply environment import-specs)))
-    (lambda (sys-path lib-name form)
+    (lambda (sys-path filename lib-name form)
       (let ((import-form (cadddr form)))
         (define (compile-lib! lib-name imported-libs)
           (cond ((not (member lib-name compiled-libraries))
@@ -61,12 +61,12 @@
         (compile-lib! lib-name (extract-imported-libs import-form))))))
 
 (define (process-library sys-path filename library-action include-action)
-  (let ((form (call-with-input-file filename read)))
+  (let ((form (call-with-input-file (string-append sys-path "/" filename) read)))
     (let ((lib-name (cadr form))
           (include-forms (filter (lambda (form)
                                    (eq? (car form) 'include))
                                  (cddddr form))))
-      (library-action sys-path lib-name form)
+      (library-action sys-path filename lib-name form)
       (for-each (lambda (iform)
                   (for-each (lambda (filespec)
                               (include-action sys-path lib-name filespec))
