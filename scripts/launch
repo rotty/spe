@@ -34,16 +34,6 @@ setup() {
     clean_symlink_tree "$target_dir" "*.slfasl"
     setup_no_symlinks $impl "$@" | while read source dest; do
 	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
-	if echo "$dest" | grep -q "\.sls$"; then
-	    source_noext=`echo "$source" | sed "s,\.sls$,,g"`
-	    for ext in ."$impl".sls .sls; do
-		source="${source_noext}${ext}"
-		if [ -f "$source" ]; then
-		    echo "$source"
-		    break
-		fi
-	    done
-	fi
 	mkdir -p `dirname "$dest"`
 	ln -s "$source" "$dest"
     done

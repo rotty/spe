@@ -133,10 +133,8 @@
          (error "invalid filespec" filespec))))
 
 (define (libname->path lib-name)
-  (filespec->path (if (= (length lib-name) 1)
-                      (car lib-name)
-                      lib-name)
-                  ".sls"))
+  (string-append (string-join (map symbol->string lib-name) "/")
+                 ".sls"))
 
 (define (string->forms s)
   (let ((port (open-string-input-port s)))
