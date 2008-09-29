@@ -47,6 +47,11 @@ launch_ikarus() {
     setup "ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
     if [ $# -eq 0 ]; then
 	cd targets/ikarus && rlwrap ikarus
+    elif [ "$1" == test ]; then
+	shift
+	test_file="../../systems/$1/tests/tests.scm"
+	shift
+	cd targets/ikarus && ikarus --r6rs-script ../../scripts/run-tests.sps "$test_file" "$@"
     else
 	cd targets/ikarus && ikarus --r6rs-script "$@"
     fi
@@ -63,6 +68,12 @@ launch_larceny() {
 	setup larceny "$setup_cmd" -- symlinks
 	setup_no_symlinks larceny larceny -r6rs -path . -program scripts/setup.scm \
 	    -- compile targets/larceny "(spe boot filesys) (larceny compiler)"
+    elif [ "$1" = test ]; then
+	shift
+	test_file="../../systems/$1/tests/tests.scm"
+	shift
+	cd targets/larceny && larceny -r6rs -path . \
+	    -program  ../../scripts/run-tests.sps -- "$test_file" "$@"
     elif [ "$1" = run ]; then
 	shift
 	if [ $# -eq 0 ]; then
