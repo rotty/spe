@@ -1,5 +1,5 @@
 BEGIN {
-    IMPL_LIST = "ikarus larceny";
+    IMPL_LIST = "ikarus mzscheme larceny";
     
     IMPL_RX = IMPL_LIST;
     gsub(" ", "|", IMPL_RX)
@@ -13,11 +13,11 @@ BEGIN {
     split($0, parts, "/");
     impl_found = 0;
     impl_filename = $0;
-    gsub("\\.sls$", "." IMPLEMENTATION ".sls", impl_filename);
+    sub("\\.sls$", "." IMPLEMENTATION ".sls", impl_filename);
     if (system("test -f '" impl_filename "'") != 0) {
         impl_filename = $0;
     }
-    gsub(parts[1] "/" parts[2] "/", "", impl_filename);
+    sub(parts[1] "/" parts[2] "/", "", impl_filename);
     printf("(\"%s/%s\" \"%s\")\n",  parts[1], parts[2], impl_filename);
 }
 

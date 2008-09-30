@@ -44,7 +44,7 @@ setup() {
 #
 
 launch_ikarus() {
-    setup "ikarus" "ikarus --r6rs-script scripts/setup.scm symlinks"
+    setup "ikarus" "ikarus --r6rs-script scripts/setup.scm" symlinks ikarus
     if [ $# -eq 0 ]; then
 	cd targets/ikarus && rlwrap ikarus
     elif [ "$1" == test ]; then
@@ -60,14 +60,14 @@ launch_ikarus() {
 launch_larceny() {
     setup_cmd="larceny -r6rs -path . -program scripts/setup.scm"
     if [ $# -eq 0 ]; then
-	setup larceny "$setup_cmd" -- symlinks
+	setup larceny "$setup_cmd" -- symlinks larceny
 	cd targets/larceny && rlwrap larceny -path . -err5rs
     elif [ "$1" = symlink ]; then
-	setup larceny "$setup_cmd" -- symlinks
+	setup larceny "$setup_cmd" -- symlinks larceny
     elif [ "$1" = compile ]; then
-	setup larceny "$setup_cmd" -- symlinks
+	setup larceny "$setup_cmd" -- symlinks larceny
 	setup_no_symlinks larceny larceny -r6rs -path . -program scripts/setup.scm \
-	    -- compile targets/larceny "(spe boot filesys) (larceny compiler)"
+	    -- compile larceny targets/larceny
     elif [ "$1" = test ]; then
 	shift
 	test_file="../../systems/$1/tests/tests.scm"
@@ -86,6 +86,21 @@ launch_larceny() {
     fi
 }
 
+launch_mzscheme() {
+    export PLTCOLLECTS="`pwd`/targets/mzscheme:$PLTCOLLECTS"
+    setup "mzscheme" "mzscheme scripts/setup.scm" symlinks mzscheme
+    if [ $# -eq 0 ]; then
+	cd targets/mzscheme && rlwrap mzscheme -i -l errortrace
+    elif [ "$1" == test ]; then
+	shift
+	test_file="../../systems/$1/tests/tests.scm"
+	shift
+	cd targets/mzscheme && mzscheme ../../scripts/run-tests.sps "$test_file" "$@"
+    else
+	cd targets/mzscheme && mzscheme "$@"
+    fi
+}
+
 #
 # main body follows
 #
@@ -97,11 +112,8 @@ if [ -z "$impl" ]; then
 fi
 
 case "$impl" in
-    ikarus)
-	launch=launch_ikarus
-	;;
-    larceny)
-	launch=launch_larceny
+    (ikarus|larceny|mzscheme)
+	launch="launch_$impl"
 	;;
     *) 
 	echo "Unsupported implementation $impl; patches welcome"
@@ -111,7 +123,5 @@ esac
 shift
 
 set -e
-
-[ -d "targets/$impl" ] || mkdir "targets/$impl"
 
 $launch "$@"

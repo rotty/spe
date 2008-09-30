@@ -1,3 +1,4 @@
+#!r6rs
 (import (rnrs base)
         (rnrs lists)
         (rnrs control)
@@ -12,12 +13,36 @@
     (for-each (lambda (lst)
                 (process-library (car lst) (cadr lst) library-action include-action))
               (read)))
-  (let ((action (string->symbol (cadr args))))
+  (let ((action (string->symbol (cadr args)))
+        (impl (string->symbol (caddr args))))
     (case action
-      ((compile) (run (make-library-compiler (caddr args) (string->forms (cadddr args)))
+      ((compile) (run (make-library-compiler (cadddr args)
+                                             '((spe setup (symbol-append impl '- compiler))))
                       (lambda (sys-path lib-name filespec) #f)))
-      ((symlinks) (run library-symlink-lister include-file-symlink-lister))
-      (else (error "invalid action" action)))))
+      ((symlinks) (run (make-library-symlink-lister impl) include-file-symlink-lister))
+      (else (error #f "invalid action" action)))))
+
+;;
+;; implementation-specifics
+;; 
+(define (make-library-symlink-lister impl)
+  (case impl
+    ((ikarus larceny)
+     (lambda (sys-path filename lib-name form)
+       (println (make-link-target sys-path (length lib-name) filename)
+                " "
+                (libname->path lib-name))))
+    ((mzscheme)
+     (lambda (sys-path filename lib-name form)
+       (let ((lib-name (if (= (length lib-name) 1)
+                           (append lib-name '(main))
+                           lib-name)))
+         (println (make-link-target sys-path (length lib-name) filename)
+                  " "
+                
+                  (libname->path lib-name)))))
+    (else
+     (error #f "unsupported implementation"))))
 
 ;;
 ;; actions and action constructors
@@ -25,18 +50,9 @@
 
 (define (include-file-symlink-lister sys-path lib-name filespec)
   (let ((filename (filespec->path filespec ".scm")))
-    (for-each display (list (make-link-target sys-path (+ (filespec-ddepth filespec) 1) filename)
-                            " "
-                            filename
-                            #\newline))))
-
-(define (library-symlink-lister sys-path filename lib-name form)
-  (for-each display (list (make-link-target sys-path
-                                            (length lib-name)
-                                            filename)
-                          " "
-                          (libname->path lib-name)
-                          #\newline)))
+    (println (make-link-target sys-path (+ (filespec-ddepth filespec) 1) filename)
+             " "
+             filename)))
 
 (define (make-library-compiler target-dir import-specs)
   (let ((compiled-libraries '())
@@ -48,14 +64,12 @@
                  (for-each
                   (lambda (lib-name)
                     (let ((import-form (cadddr
-                                        (call-with-input-file
-                                            (string-append target-dir "/" (libname->path lib-name))
-                                          read))))
+                                        (call-with-input-file (libname->path lib-name) read))))
                       (compile-lib! lib-name (extract-imported-libs import-form))))
                   imported-libs)
                  
                  (eval `(with-working-directory ,target-dir
-                          (compile-library ,(libname->path lib-name)))
+                          (compile-library ,lib-name))
                        env)
                  (set! compiled-libraries (cons lib-name compiled-libraries)))))
         (compile-lib! lib-name (extract-imported-libs import-form))))))
@@ -72,6 +86,10 @@
                               (include-action sys-path lib-name filespec))
                             (cdr iform)))
                 include-forms))))
+
+;;
+;; helpers
+;;
 
 (define (extract-imported-libs import-form)
   (define (import-set-lib is)
@@ -136,6 +154,9 @@
   (string-append (string-join (map symbol->string lib-name) "/")
                  ".sls"))
 
+(define (symbol-append . args)
+  (string->symbol (apply string-append (map symbol->string args))))
+
 (define (string->forms s)
   (let ((port (open-string-input-port s)))
     (let loop ((forms '()))
@@ -143,5 +164,8 @@
         (if (eof-object? form)
             (reverse forms)
             (loop (cons form forms)))))))
+
+(define (println . args)
+  (for-each display args) (newline))
 
 (main (command-line))
