@@ -29,7 +29,7 @@
   (case impl
     ((ikarus larceny)
      (lambda (sys-path filename lib-name form)
-       (println (make-link-target sys-path (length lib-name) filename)
+       (println (make-link-target sys-path (length (filter symbol? lib-name)) filename)
                 " "
                 (libname->path lib-name))))
     ((mzscheme)
@@ -39,7 +39,6 @@
                            lib-name)))
          (println (make-link-target sys-path (length lib-name) filename)
                   " "
-                
                   (libname->path lib-name)))))
     (else
      (error #f "unsupported implementation"))))
@@ -48,11 +47,21 @@
 ;; actions and action constructors
 ;;
 
-(define (include-file-symlink-lister sys-path lib-name filespec)
-  (let ((filename (filespec->path filespec ".scm")))
-    (println (make-link-target sys-path (+ (filespec-ddepth filespec) 1) filename)
-             " "
-             filename)))
+(define (include-file-symlink-lister sys-path lib-name form)
+  (define (output ddepth target linkname)
+    (println (make-link-target sys-path (+ ddepth 1) target) " " linkname))
+  
+  (case (car form)
+    ((include)
+     (for-each (lambda (filespec)
+                 (let ((filename (filespec->path filespec ".scm")))
+                   (output (filespec-ddepth filespec) filename filename)))
+          (cdr form)))
+    ((include/resolve)
+     (output (filespec-ddepth (cdr form))
+             (resolvespec->path (cons (cdadr form) (cddr form)))
+             (resolvespec->path (cdr form))))))
+
 
 (define (make-library-compiler target-dir import-specs)
   (let ((compiled-libraries '())
@@ -78,13 +87,11 @@
   (let ((form (call-with-input-file (string-append sys-path "/" filename) read)))
     (let ((lib-name (cadr form))
           (include-forms (filter (lambda (form)
-                                   (eq? (car form) 'include))
+                                   (memq (car form) '(include include/resolve)))
                                  (cddddr form))))
       (library-action sys-path filename lib-name form)
       (for-each (lambda (iform)
-                  (for-each (lambda (filespec)
-                              (include-action sys-path lib-name filespec))
-                            (cdr iform)))
+                  (include-action sys-path lib-name iform))
                 include-forms))))
 
 ;;
@@ -114,7 +121,7 @@
 (define (make-list len . maybe-elt)
   (let ((elt (cond ((null? maybe-elt) #f) ; Default value
 		   ((null? (cdr maybe-elt)) (car maybe-elt))
-		   (else (error "Too many arguments to MAKE-LIST"
+		   (else (error 'make-list "Too many arguments"
 				(cons len maybe-elt))))))
     (do ((i len (- i 1))
 	 (ans '() (cons elt ans)))
@@ -129,16 +136,28 @@
             (loop (cons (car lst) (cons sep result))
                   (cdr lst))))))
 
+(define (resolvespec->path spec)
+  (string-append (string-join (car spec) "/")
+                 "/"
+                 (cadr spec)))
+
 (define (filespec->path name ext)
   (cond ((symbol? name) (string-append (symbol->string name) ext))
-        ((pair? name) (string-append
-                       (if (pair? (car name))
-                           (string-join (map symbol->string (car name)) "/")
-                           (symbol->string (car name)))
-                       "/"
-                       (symbol->string (cadr name))
-                       ext))
-        (else (error "invalid filespec" name))))
+        ((pair? name)
+         (string-append
+          (if (pair? (car name))
+              (string-join (map symbol->string (car name)) "/")
+              (symbol->string (car name)))
+          "/"
+          (symbol->string (cadr name))
+          ext))
+        ((string? name) name)
+        (else (error 'filespec->path "invalid filespec"))))
+
+(define (string-count s c)
+  (do ((i 0 (+ i 1))
+       (count 0 (+ count (if (char=? c (string-ref s i)) 1 0))))
+      ((>= i (string-length s)) count)))
 
 (define (filespec-ddepth filespec)
   (cond ((symbol? filespec)
@@ -147,11 +166,13 @@
          (if (pair? (car filespec))
              (length (car filespec))
              1))
+        ((string? filespec)
+         (string-count filespec #\/))
         (else
-         (error "invalid filespec" filespec))))
+         (error 'filespec-ddepth "invalid filespec" filespec))))
 
 (define (libname->path lib-name)
-  (string-append (string-join (map symbol->string lib-name) "/")
+  (string-append (string-join (map symbol->string (filter symbol? lib-name)) "/")
                  ".sls"))
 
 (define (symbol-append . args)

@@ -1,5 +1,5 @@
 BEGIN {
-    IMPL_LIST = "ikarus mzscheme larceny";
+    IMPL_LIST = "ikarus mzscheme larceny ypsilon";
     
     IMPL_RX = IMPL_LIST;
     gsub(" ", "|", IMPL_RX)
@@ -9,7 +9,7 @@ BEGIN {
     print "("; 
 }
 
-/\.sls/ && ($0 !~ /\/_darcs\//) && ($0 !~ ("\\." IMPL_RX "\\.sls$")) {
+/\.sls$/ && ($0 !~ /\/_darcs\//) && ($0 !~ ("\\." IMPL_RX "\\.sls$")) {
     split($0, parts, "/");
     impl_found = 0;
     impl_filename = $0;
