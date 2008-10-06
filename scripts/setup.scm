@@ -37,7 +37,7 @@
        (let ((lib-name (if (= (length lib-name) 1)
                            (append lib-name '(main))
                            lib-name)))
-         (println (make-link-target sys-path (length lib-name) filename)
+         (println (make-link-target sys-path (length (filter symbol? lib-name)) filename)
                   " "
                   (libname->path lib-name)))))
     (else
