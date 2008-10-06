@@ -24,7 +24,7 @@ clean_symlink_tree() {
 setup_no_symlinks() {
     impl="$1"; shift
     program="$1"; shift
-    find systems -type f | awk -f scripts/build-liblist.awk -- $impl | $program "$@"
+    find systems -type f -name "*.sls" ! -path "*/_darcs/*" | $program "$@"
 }
 
 setup() {

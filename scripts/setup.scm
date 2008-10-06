@@ -12,25 +12,57 @@
 
 (define *silent* #f)
 
+(define *implementations* '(ikarus mzscheme larceny ypsilon))
+
 ;; entry point
 (define (main args)
-  (define (run library-action include-action)
-    (for-each (lambda (lst)
-                (process-library (car lst) (cadr lst) library-action include-action))
-              (read)))
   (let ((action (string->symbol (cadr args)))
         (impl (string->symbol (caddr args))))
     (case action
       ((compile)
-       (run (make-library-compiler (cadddr args)
-                                             `((rnrs base)
-                                               (spe setup ,(symbol-append impl '- 'compiler))))
-                      (lambda (sys-path lib-name filespec) #f)))
+       (run impl
+            (make-library-compiler (cadddr args)
+                                   `((rnrs base)
+                                     (spe setup ,(symbol-append impl '- 'compiler))))
+            (lambda (sys-path lib-name filespec) #f)))
       ((symlinks)
        (when (eq? impl 'larceny)
          (set! *silent* #t))  ;; larceny has (current-error-port) returning stdout!!
-       (run (make-library-symlink-lister impl) include-file-symlink-lister))
+       (run impl (make-library-symlink-lister impl) include-file-symlink-lister))
       (else (error #f "invalid action" action)))))
+
+;; Read in a list of .sls files from stdin and call `process-library'
+;; for each of them, filtering out implementation-specific files that
+;; are not for the provided implementation.
+(define (run implementation library-action include-action)
+  (for-each (lambda (filename)
+              (let ((parts (string-split filename "/")))
+                (process-library (string-append (car parts) "/" (cadr parts))
+                                 (string-join (cddr parts) "/")
+                                 library-action
+                                 include-action)))
+            (filter-libfilenames implementation (read-lines (current-input-port)))))
+
+(define (filter-libfilenames implementation filenames)
+  (define (impl-suffix impl)
+    (string-append "." (symbol->string impl) ".sls"))
+  (let ((our-suffix (impl-suffix implementation)))
+    (let loop ((result '()) (fnames filenames))
+      (if (null? fnames)
+          result ; order doesn't matter
+          (cond ((string-suffix? (car fnames) our-suffix)
+                 (loop (cons (car fnames) result) (cdr fnames)))
+                ((exists (lambda (impl)
+                           (string-suffix? (car fnames) (impl-suffix impl)))
+                         *implementations*) ; other implementation?
+                 (loop result (cdr fnames))) ; -> ignore
+                ((member (string-append
+                          (substring (car fnames) 0 (- (string-length (car fnames)) 4))
+                          our-suffix)
+                         filenames) ; implementation specific file in input?
+                 (loop result (cdr fnames))) ; -> ignore
+                (else
+                 (loop (cons (car fnames) result) (cdr fnames))))))))
 
 ;;
 ;; implementation-specifics
@@ -99,7 +131,7 @@
 (define (process-library sys-path filename library-action include-action)
   (let ((form (guard (c
                       ((error? c)
-                       (message "error while processing library in " filename ":")
+                       (message "error while processing library in " sys-path "/" filename ":")
                        (if (message-condition? c)
                            (message (condition-message c))
                            (message "no error message available"))
@@ -196,6 +228,13 @@
         (if (eof-object? form)
             (reverse forms)
             (loop (cons form forms)))))))
+
+(define (read-lines port)
+  (let loop ((result '()))
+    (let ((line (get-line (current-input-port))))
+      (if (eof-object? line)
+          (reverse result)
+          (loop (cons line result))))))
 
 (define (println . args)
   (for-each display args) (newline))
