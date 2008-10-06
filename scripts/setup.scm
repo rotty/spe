@@ -2,10 +2,15 @@
 (import (rnrs base)
         (rnrs lists)
         (rnrs control)
+        (rnrs exceptions)
+        (rnrs conditions)
         (rnrs io simple)
         (rnrs io ports)
         (rnrs programs)
-        (rnrs eval))
+        (rnrs eval)
+        (spe setup utils))
+
+(define *silent* #f)
 
 ;; entry point
 (define (main args)
@@ -16,10 +21,15 @@
   (let ((action (string->symbol (cadr args)))
         (impl (string->symbol (caddr args))))
     (case action
-      ((compile) (run (make-library-compiler (cadddr args)
-                                             '((spe setup (symbol-append impl '- compiler))))
+      ((compile)
+       (run (make-library-compiler (cadddr args)
+                                             `((rnrs base)
+                                               (spe setup ,(symbol-append impl '- 'compiler))))
                       (lambda (sys-path lib-name filespec) #f)))
-      ((symlinks) (run (make-library-symlink-lister impl) include-file-symlink-lister))
+      ((symlinks)
+       (when (eq? impl 'larceny)
+         (set! *silent* #t))  ;; larceny has (current-error-port) returning stdout!!
+       (run (make-library-symlink-lister impl) include-file-symlink-lister))
       (else (error #f "invalid action" action)))))
 
 ;;
@@ -56,7 +66,7 @@
      (for-each (lambda (filespec)
                  (let ((filename (filespec->path filespec ".scm")))
                    (output (filespec-ddepth filespec) filename filename)))
-          (cdr form)))
+               (cdr form)))
     ((include/resolve)
      (output (filespec-ddepth (cdr form))
              (resolvespec->path (cons (cdadr form) (cddr form)))
@@ -73,26 +83,37 @@
                  (for-each
                   (lambda (lib-name)
                     (let ((import-form (cadddr
-                                        (call-with-input-file (libname->path lib-name) read))))
+                                        (call-with-input-file
+                                            (string-append target-dir "/" (libname->path lib-name))
+                                          read))))
                       (compile-lib! lib-name (extract-imported-libs import-form))))
                   imported-libs)
-                 
+
+                 (message "compiling " lib-name)
                  (eval `(with-working-directory ,target-dir
-                          (compile-library ,lib-name))
+                          (compile-library ',lib-name))
                        env)
                  (set! compiled-libraries (cons lib-name compiled-libraries)))))
         (compile-lib! lib-name (extract-imported-libs import-form))))))
 
 (define (process-library sys-path filename library-action include-action)
-  (let ((form (call-with-input-file (string-append sys-path "/" filename) read)))
-    (let ((lib-name (cadr form))
-          (include-forms (filter (lambda (form)
-                                   (memq (car form) '(include include/resolve)))
-                                 (cddddr form))))
-      (library-action sys-path filename lib-name form)
-      (for-each (lambda (iform)
-                  (include-action sys-path lib-name iform))
-                include-forms))))
+  (let ((form (guard (c
+                      ((error? c)
+                       (message "error while processing library in " filename ":")
+                       (if (message-condition? c)
+                           (message (condition-message c))
+                           (message "no error message available"))
+                       'error))
+                (call-with-input-file (string-append sys-path "/" filename) read))))
+    (unless (eq? form 'error)
+      (let ((lib-name (cadr form))
+            (include-forms (filter (lambda (form)
+                                     (memq (car form) '(include include/resolve)))
+                                   (cddddr form))))
+        (library-action sys-path filename lib-name form)
+        (for-each (lambda (iform)
+                    (include-action sys-path lib-name iform))
+                  include-forms)))))
 
 ;;
 ;; helpers
@@ -107,7 +128,7 @@
              (else is)))))
   (filter
    (lambda (lib-name)
-     (not (eq? (car lib-name) 'rnrs)))
+     (memq (car lib-name) '(xitomatl spells sxml texinfo stexidoc)))
    (map (lambda (import-spec)
           (cond ((and (pair? import-spec)
                       (eq? (car import-spec) 'for))
@@ -116,7 +137,9 @@
         (cdr import-form))))
 
 (define (make-link-target sys-path n filename)
-  (string-append "../"  (string-join (make-list n "..") "/")  "/" sys-path "/" filename))
+  (if (= n 0)
+      (string-append "../"  sys-path "/" filename)
+      (string-append "../"  (string-join (make-list n "..") "/")  "/" sys-path "/" filename)))
 
 (define (make-list len . maybe-elt)
   (let ((elt (cond ((null? maybe-elt) #f) ; Default value
@@ -127,19 +150,11 @@
 	 (ans '() (cons elt ans)))
 	((<= i 0) ans))))
 
-(define (string-join lst sep)
-  (if (null? lst)
-      ""
-      (let loop ((result '()) (lst lst))
-        (if (null? lst)
-            (apply string-append (cdr (reverse result)))
-            (loop (cons (car lst) (cons sep result))
-                  (cdr lst))))))
-
 (define (resolvespec->path spec)
-  (string-append (string-join (car spec) "/")
-                 "/"
-                 (cadr spec)))
+  (let ((dirname (string-join (car spec) "/")))
+    (if (= (string-length dirname) 0)
+        (cadr spec)
+        (string-append dirname "/" (cadr spec)))))
 
 (define (filespec->path name ext)
   (cond ((symbol? name) (string-append (symbol->string name) ext))
@@ -171,10 +186,6 @@
         (else
          (error 'filespec-ddepth "invalid filespec" filespec))))
 
-(define (libname->path lib-name)
-  (string-append (string-join (map symbol->string (filter symbol? lib-name)) "/")
-                 ".sls"))
-
 (define (symbol-append . args)
   (string->symbol (apply string-append (map symbol->string args))))
 
@@ -188,5 +199,10 @@
 
 (define (println . args)
   (for-each display args) (newline))
+
+(define (message . args)
+  (unless *silent*
+    (for-each (lambda (arg) (display arg (current-error-port))) args)
+    (newline (current-error-port))))
 
 (main (command-line))
