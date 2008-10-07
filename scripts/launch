@@ -31,7 +31,7 @@ setup() {
     impl="$1"
     target_dir="targets/$impl"
     shift
-    clean_symlink_tree "$target_dir" "*.slfasl"
+    clean_symlink_tree "$target_dir" "*.slfasl" "*.dep" "*.zo"
     setup_no_symlinks $impl "$@" | while read source dest; do
 	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
 	mkdir -p `dirname "$dest"`
@@ -73,8 +73,7 @@ launch_larceny() {
 	setup larceny "$setup_cmd" -- symlinks larceny
     elif [ "$1" = compile ]; then
 	setup larceny "$setup_cmd" -- symlinks larceny
-	setup_no_symlinks larceny larceny -r6rs -path . -program scripts/setup.scm \
-	    -- compile larceny targets/larceny
+	setup_no_symlinks larceny "$setup_cmd" -- compile larceny targets/larceny
     elif [ "$1" = test ]; then
 	shift
 	test_file="../../systems/$1/tests/tests.scm"
@@ -94,10 +93,17 @@ launch_larceny() {
 }
 
 launch_mzscheme() {
-    export PLTCOLLECTS="`pwd`/targets/mzscheme:$PLTCOLLECTS"
-    setup "mzscheme" "mzscheme scripts/setup.scm" symlinks mzscheme
+    export PLTCOLLECTS="`pwd`/targets/mzscheme:`pwd`:$PLTCOLLECTS"
+    setup_cmd="mzscheme scripts/setup.scm"
     if [ $# -eq 0 ]; then
-	cd targets/mzscheme && rlwrap mzscheme -i -l errortrace
+	cd targets/mzscheme && rlwrap mzscheme -i -l errortrace 
+    elif [ "$1" = symlink ]; then
+	setup mzscheme "$setup_cmd" symlinks mzscheme
+    elif [ "$1" = compile ]; then
+	setup mzscheme "$setup_cmd" symlinks mzscheme
+	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
+    elif [ "$1" = recompile ]; then
+	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
     elif [ "$1" == test ]; then
 	shift
 	test_file="../../systems/$1/tests/tests.scm"

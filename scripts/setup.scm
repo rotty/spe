@@ -21,7 +21,8 @@
     (case action
       ((compile)
        (run impl
-            (make-library-compiler (cadddr args)
+            (make-library-compiler impl
+                                   (cadddr args)
                                    `((rnrs base)
                                      (spe setup ,(symbol-append impl '- 'compiler))))
             (lambda (sys-path lib-name filespec) #f)))
@@ -66,25 +67,35 @@
 
 ;;
 ;; implementation-specifics
-;; 
-(define (make-library-symlink-lister impl)
+;;
+(define (libname-converter impl)
   (case impl
-    ((ikarus larceny)
-     (lambda (sys-path filename lib-name form)
-       (println (make-link-target sys-path (length (filter symbol? lib-name)) filename)
-                " "
-                (libname->path lib-name))))
-    ((mzscheme)
-     (lambda (sys-path filename lib-name form)
-       (let ((lib-name (if (= (length lib-name) 1)
-                           (append lib-name '(main))
-                           lib-name)))
-         (println (make-link-target sys-path (length (filter symbol? lib-name)) filename)
-                  " "
-                  (libname->path lib-name)))))
-    (else
-     (error #f "unsupported implementation"))))
+    ((ikarus larceny) values)
+    ((mzscheme) pltify-libname)))
 
+(define (make-library-symlink-lister impl)
+  (let ((conv (libname-converter impl)))
+    (lambda (sys-path filename libname form)
+      (let ((libname (conv libname)))
+        (println (make-link-target sys-path (length (filter symbol? libname)) filename)
+                 " "
+                 (libname->path libname))))))
+
+(define (escape-symbol symbol)
+  (string->symbol
+   (apply string-append (map (lambda (c)
+                               (case c
+                                 ((#\*) "%2a")
+                                 (else (string c))))
+                             (string->list (symbol->string symbol))))))
+
+(define (pltify-libname libname)
+  (map (lambda (part)
+         (cond ((symbol? part) (escape-symbol part))
+               (else part)))
+       (if (= (length libname) 1)
+           (append libname '(main))
+           libname)))
 ;;
 ;; actions and action constructors
 ;;
@@ -105,19 +116,21 @@
              (resolvespec->path (cdr form))))))
 
 
-(define (make-library-compiler target-dir import-specs)
+(define (make-library-compiler impl target-dir import-specs)
   (let ((compiled-libraries '())
-        (env (apply environment import-specs)))
+        (env (apply environment import-specs))
+        (conv (libname-converter impl)))
     (lambda (sys-path filename lib-name form)
       (let ((import-form (cadddr form)))
         (define (compile-lib! lib-name imported-libs)
           (cond ((not (member lib-name compiled-libraries))
                  (for-each
                   (lambda (lib-name)
-                    (let ((import-form (cadddr
-                                        (call-with-input-file
-                                            (string-append target-dir "/" (libname->path lib-name))
-                                          read))))
+                    (let ((import-form
+                           (cadddr
+                            (call-with-input-file
+                                (string-append target-dir "/" (libname->path (conv lib-name)))
+                              read))))
                       (compile-lib! lib-name (extract-imported-libs import-form))))
                   imported-libs)
 
