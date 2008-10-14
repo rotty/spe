@@ -1,5 +1,6 @@
 #!r6rs
 (import (rnrs base)
+        (rnrs unicode)
         (rnrs lists)
         (rnrs control)
         (rnrs exceptions)
@@ -70,7 +71,8 @@
 ;;
 (define (libname-converter impl)
   (case impl
-    ((ikarus larceny) values)
+    ((larceny) values)
+    ((ikarus) (lambda (libname) (escape-libname libname char-upcase)))
     ((mzscheme) pltify-libname)))
 
 (define (make-library-symlink-lister impl)
@@ -81,21 +83,25 @@
                  " "
                  (libname->path libname))))))
 
-(define (escape-symbol symbol)
+(define (escape-symbol symbol maybe-upcase)
   (string->symbol
    (apply string-append (map (lambda (c)
                                (case c
-                                 ((#\*) "%2a")
+                                 ((#\*) (string #\% #\2 (maybe-upcase #\a)))
                                  (else (string c))))
                              (string->list (symbol->string symbol))))))
 
-(define (pltify-libname libname)
+(define (escape-libname libname maybe-upcase)
   (map (lambda (part)
-         (cond ((symbol? part) (escape-symbol part))
+         (cond ((symbol? part) (escape-symbol part maybe-upcase))
                (else part)))
-       (if (= (length libname) 1)
-           (append libname '(main))
-           libname)))
+       libname))
+
+(define (pltify-libname libname)
+  (escape-libname (if (= (length libname) 1)
+                      (append libname '(main))
+                      libname)
+                  values))
 ;;
 ;; actions and action constructors
 ;;
