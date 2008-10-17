@@ -31,7 +31,7 @@ setup() {
     impl="$1"
     target_dir="targets/$impl"
     shift
-    clean_symlink_tree "$target_dir" "*.slfasl" "*.dep" "*.zo"
+    clean_symlink_tree "$target_dir" "*.slfasl" "*.ikarus-fasl" "*.dep" "*.zo"
     setup_no_symlinks $impl "$@" | while read source dest; do
 	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
 	mkdir -p `dirname "$dest"`
