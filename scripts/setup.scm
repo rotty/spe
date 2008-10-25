@@ -111,7 +111,7 @@
     (println (make-link-target sys-path (+ ddepth 1) target) " " linkname))
   
   (case (car form)
-    ((include)
+    ((include-file)
      (for-each (lambda (filespec)
                  (let ((filename (filespec->path filespec ".scm")))
                    (output (filespec-ddepth filespec) filename filename)))
@@ -159,7 +159,7 @@
     (unless (eq? form 'error)
       (let ((lib-name (cadr form))
             (include-forms (filter (lambda (form)
-                                     (memq (car form) '(include include/resolve)))
+                                     (memq (car form) '(include-file include/resolve)))
                                    (cddddr form))))
         (library-action sys-path filename lib-name form)
         (for-each (lambda (iform)
