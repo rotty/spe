@@ -72,7 +72,7 @@
 (define (libname-converter impl)
   (case impl
     ((larceny) values)
-    ((ikarus) (lambda (libname) (escape-libname libname char-upcase)))
+    ((ikarus) (lambda (libname) (escape-libname libname values)))
     ((mzscheme) pltify-libname)))
 
 (define (make-library-symlink-lister impl)
