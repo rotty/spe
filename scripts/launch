@@ -55,6 +55,8 @@ launch_ikarus() {
     if [ $# -eq 0 ]; then
 	setup ikarus "$setup_cmd" symlinks ikarus
 	cd targets/ikarus && rlwrap ikarus
+    elif [ "$1" = symlink ]; then
+	setup ikarus "$setup_cmd" symlinks ikarus
     elif [ "$1" = test ]; then
 	shift
 	test_file="../../systems/$1/tests/tests.scm"
