@@ -102,24 +102,51 @@
                       (append libname '(main))
                       libname)
                   values))
+
+(define (basename path)
+  (cond ((string-index-right path #\/)
+         => (lambda (i)
+              (substring path (+ i 1) (string-length path))))
+        (else
+         path)))
+
+(define (dirname path)
+  (cond ((string-index-right path #\/)
+         => (lambda (i)
+              (substring path 0 i)))
+        (else
+         path)))
+
+(define (string-index-right s c)
+  (let loop ((i (- (string-length s) 1)))
+    (cond ((<= i 0)
+           #f)
+          ((char=? c (string-ref s i))
+           i)
+          (else
+           (loop (- i 1))))))
 ;;
 ;; actions and action constructors
 ;;
 
 (define (include-file-symlink-lister sys-path lib-name form)
-  (define (output ddepth target linkname)
-    (println (make-link-target sys-path (+ ddepth 1) target) " " linkname))
+  (let ((lib-dir (dirname sys-path)))
+    
+    (define (output ddepth target linkname)
+      (println (make-link-target lib-dir (+ ddepth 1) target) " " linkname))
   
-  (case (car form)
-    ((include-file)
-     (for-each (lambda (filespec)
-                 (let ((filename (filespec->path filespec ".scm")))
-                   (output (filespec-ddepth filespec) filename filename)))
-               (cdr form)))
-    ((include/resolve)
-     (output (filespec-ddepth (cdr form))
-             (resolvespec->path (cons (cdadr form) (cddr form)))
-             (resolvespec->path (cdr form))))))
+    (case (car form)
+      ((include-file)
+       (for-each (lambda (filespec)
+                   (let ((filename (filespec->path filespec ".scm")))
+                     (output (filespec-ddepth filespec)
+                             filename
+                             filename)))
+                 (cdr form)))
+      ((include/resolve)
+       (output (filespec-ddepth (cdr form))
+               (resolvespec->path (cdr form))
+               (resolvespec->path (cdr form)))))))
 
 
 (define (make-library-compiler impl target-dir import-specs)
