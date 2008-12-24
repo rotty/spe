@@ -1,6 +1,6 @@
 #!r6rs
 (library (spe setup utils)
-  (export string-join string-split string-suffix? libname->path)
+  (export string-join string-split string-prefix? string-suffix? libname->path)
   (import (rnrs base)
           (rnrs control)
           (rnrs arithmetic fixnums)
@@ -20,6 +20,13 @@
               (apply string-append (cdr (reverse result)))
               (loop (cons (car lst) (cons sep result))
                     (cdr lst))))))
+
+  (define (string-prefix? s1 s2)
+    (and (>= (string-length s1)
+             (string-length s2))
+         (let ((ls1 (string-length s1))
+               (ls2 (string-length s2)))
+           (string=? (substring s1 0 ls2) s2))))
 
   (define (string-suffix? s1 s2)
     (and (>= (string-length s1)

@@ -174,6 +174,16 @@
                  (set! compiled-libraries (cons lib-name compiled-libraries)))))
         (compile-lib! lib-name (extract-imported-libs import-form))))))
 
+(define (read-library port)
+  (let ((first-line (get-line port)))
+    (cond
+     ((string-prefix? first-line ";;;(library ")
+      (read (open-string-input-port
+             (substring first-line 3 (string-length first-line)))))
+     (else
+      (set-port-position! port 0)
+      (read port)))))
+
 (define (process-library sys-path filename library-action include-action)
   (let ((form (guard (c
                       ((error? c)
@@ -182,8 +192,12 @@
                            (message (condition-message c))
                            (message "no error message available"))
                        'error))
-                (call-with-input-file (string-append sys-path "/" filename) read))))
-    (unless (eq? form 'error)
+                (call-with-input-file (string-append sys-path "/" filename)
+                  read-library))))
+    (cond
+     ((eq? form 'error)
+      #f)
+     (else
       (let ((lib-name (cadr form))
             (include-forms (filter (lambda (form)
                                      (memq (car form) '(include-file include/resolve)))
@@ -191,7 +205,7 @@
         (library-action sys-path filename lib-name form)
         (for-each (lambda (iform)
                     (include-action sys-path lib-name iform))
-                  include-forms)))))
+                  include-forms))))))
 
 ;;
 ;; helpers
