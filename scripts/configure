@@ -1,0 +1,8 @@
+#!/bin/sh
+
+cd systems
+for system in *; do
+    if [ -x "$system/autogen.sh" ]; then
+        (cd "$system" && ./autogen.sh)
+    fi
+done
