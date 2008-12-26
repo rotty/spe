@@ -1,14 +1,15 @@
 #!/bin/sh
 
 if [ ! -d systems/xitomatl ]; then
-    bzr branch lp:~rotty/ikarus-libraries/xitomatl systems/xitomatl
+    bzr checkout --lightweight lp:~rotty/ikarus-libraries/xitomatl systems/xitomatl
 fi
 if [ ! -d systems/xitomatl/srfi ]; then
-    bzr branch lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/xitomatl/srfi
+    bzr checkout --lightweight \
+        lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/xitomatl/srfi
 fi
 for system in spells testeez; do
     if [ ! -d systems/$system ]; then
-        darcs get --set-scripts-executable \
+        darcs get --lazy --set-scripts-executable \
             http://download.gna.org/spells/darcs/r6rs/$system systems/$system
     fi
 done
