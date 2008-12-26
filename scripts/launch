@@ -113,7 +113,7 @@ launch_mzscheme() {
 	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
     elif [ "$1" = recompile ]; then
 	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
-    elif [ "$1" == test ]; then
+    elif [ "$1" = test ]; then
 	shift
 	test_file="../../systems/$1/tests/tests.scm"
 	shift
