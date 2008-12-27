@@ -72,8 +72,10 @@
 (define (libname-converter impl)
   (case impl
     ((larceny) values)
-    ((ikarus) (lambda (libname) (escape-libname libname values)))
-    ((mzscheme) pltify-libname)))
+    ((ikarus ypsilon) (lambda (libname) (escape-libname libname values)))
+    ((mzscheme) pltify-libname)
+    (else
+     (error 'libname-converter "not implemented for this implementation" impl))))
 
 (define (make-library-symlink-lister impl)
   (let ((conv (libname-converter impl)))

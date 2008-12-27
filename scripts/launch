@@ -20,6 +20,7 @@ clean_symlink_tree() {
 	exit 1
     fi
     rm -rf "$dir"
+    mkdir -p "$dir"
 }
 
 setup_no_symlinks() {
@@ -123,6 +124,25 @@ launch_mzscheme() {
     fi
 }
 
+launch_ypsilon() {
+    mkdir -p targets/ypsilon
+    export YPSILON_SITELIB="`pwd`/targets/ypsilon:`pwd`:$YPSILON_SITELIB"
+    setup_cmd="ypsilon --r6rs scripts/setup.scm"
+    if [ $# -eq 0 ]; then
+	cd targets/ypsilon && rlwrap ypsilon
+    elif [ "$1" = symlink ]; then
+	setup ypsilon "$setup_cmd" symlinks ypsilon
+    elif [ "$1" = test ]; then
+	shift
+	test_file="../../systems/$1/tests/tests.scm"
+	shift
+	cd targets/ypsilon && ypsilon --r6rs \
+            ../../scripts/run-tests.sps "$test_file" "$@"
+    else
+	cd targets/ypsilon && ypsilon --r6rs "$@"
+    fi
+}
+
 #
 # main body follows
 #
@@ -134,11 +154,11 @@ if [ -z "$impl" ]; then
 fi
 
 case "$impl" in
-    (ikarus|larceny|mzscheme)
+    (ikarus|larceny|mzscheme|ypsilon)
 	launch="launch_$impl"
 	;;
     *) 
-	echo "Unsupported implementation $impl; patches welcome"
+	echo "Unsupported implementation '$impl'; patches welcome ;-)"
 	exit 1
 	;;
 esac
