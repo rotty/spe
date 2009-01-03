@@ -52,118 +52,62 @@ setup() {
 # implementation specific routines
 #
 
-launch_ikarus() {
-    setup_cmd="ikarus --r6rs-script scripts/setup.scm"
-    if [ $# -eq 0 ]; then
-	setup ikarus "$setup_cmd" symlinks ikarus
-	cd targets/ikarus && rlwrap ikarus
-    elif [ "$1" = symlink ]; then
-	setup ikarus "$setup_cmd" symlinks ikarus
-    elif [ "$1" = test ]; then
-	shift
-	test_file="../../systems/$1/tests/tests.scm"
-	shift
-	#setup ikarus "$setup_cmd" symlinks ikarus
-	cd targets/ikarus && ikarus --r6rs-script ../../scripts/run-tests.sps "$test_file" "$@"
-    elif [ "$1" = run ]; then
-	shift
-	cd targets/ikarus && ikarus --r6rs-script "$@"
-    else
-	setup ikarus "$setup_cmd" symlinks ikarus
-	cd targets/ikarus && ikarus --r6rs-script "$@"
+function launch() {
+    impl="$1"
+    if [ -z "$impl" ]; then
+        echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
+        exit 1
     fi
-}
 
-launch_larceny() {
-    setup_cmd="larceny -r6rs -path . -program scripts/setup.scm"
+    impl="$1"; shift
+    case "$impl" in
+        ikarus)
+            export IKARUS_LIBRARY_PATH="$IKARUS_LIBRARY_PATH:`pwd`/targets/ikarus"
+            run_r6rs_script="ikarus --r6rs-script"
+            repl="rlwrap ikarus"
+            ;;
+        mzscheme)
+            export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/targets/mzscheme:`pwd`"
+            run_r6rs_script="mzscheme -l errortrace -u"
+            repl="rlwrap mzscheme -i"
+            ;;
+        ypsilon)
+            run_r6rs_script="ypsilon --r6rs"
+            repl=
+            ;;
+        larceny)
+            run_r6rs_script="larceny -r6rs -path targets/larceny -program"
+            repl="rlwrap larceny -path targets/larceny -err5rs"
+            ;;
+        *)
+            echo "Unsupported implementation '$impl'; patches welcome ;-)"
+            exit 1
+            ;;
+    esac
+    
+    setup_cmd="$run_r6rs_script scripts/setup.scm"
     if [ $# -eq 0 ]; then
-	setup larceny "$setup_cmd" -- symlinks larceny
-	cd targets/larceny && rlwrap larceny -path . -err5rs
+        $repl
     elif [ "$1" = symlink ]; then
-	setup larceny "$setup_cmd" -- symlinks larceny
+	setup "$impl" "$setup_cmd" symlinks "$impl"
     elif [ "$1" = compile ]; then
-	setup larceny "$setup_cmd" -- symlinks larceny
-	setup_no_symlinks larceny "$setup_cmd" -- compile larceny targets/larceny
-    elif [ "$1" = test ]; then
-	shift
-	test_file="../../systems/$1/tests/tests.scm"
-	shift
-	cd targets/larceny && larceny -r6rs -path . \
-	    -program  ../../scripts/run-tests.sps -- "$test_file" "$@"
-    elif [ "$1" = run ]; then
-	shift
-	if [ $# -eq 0 ]; then
-	    cd targets/larceny && rlwrap larceny -path . -err5rs
-	else
-	    cd targets/larceny && larceny -path . -r6rs -program "$@"
-	fi
-    else
-	cd targets/larceny && larceny -path . -r6rs -program "$@"
-    fi
-}
-
-launch_mzscheme() {
-    export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/targets/mzscheme:`pwd`"
-    setup_cmd="mzscheme scripts/setup.scm"
-    if [ $# -eq 0 ]; then
-	cd targets/mzscheme && rlwrap mzscheme -i
-    elif [ "$1" = symlink ]; then
-	setup mzscheme "$setup_cmd" symlinks mzscheme
-    elif [ "$1" = compile ]; then
-	setup mzscheme "$setup_cmd" symlinks mzscheme
-	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
+	setup "$impl" "$setup_cmd" symlinks "$impl"
+	setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
     elif [ "$1" = recompile ]; then
-	setup_no_symlinks mzscheme "$setup_cmd" compile mzscheme targets/mzscheme
+	setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
     elif [ "$1" = test ]; then
 	shift
-	test_file="../../systems/$1/tests/tests.scm"
+	test_file="systems/$1/tests/tests.scm"
 	shift
-	cd targets/mzscheme && mzscheme -l errortrace -u ../../scripts/run-tests.sps "$test_file" "$@"
+	$run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
+    elif [ "$1" = make-doc ]; then
+        rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
+        $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
+            "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
     else
-	cd targets/mzscheme && mzscheme -l errortrace -u "$@"
+	$run_r6rs_script "$@"
     fi
 }
-
-launch_ypsilon() {
-    mkdir -p targets/ypsilon
-    export YPSILON_SITELIB="`pwd`/targets/ypsilon:`pwd`:$YPSILON_SITELIB"
-    setup_cmd="ypsilon --r6rs scripts/setup.scm"
-    if [ $# -eq 0 ]; then
-	cd targets/ypsilon && rlwrap ypsilon
-    elif [ "$1" = symlink ]; then
-	setup ypsilon "$setup_cmd" symlinks ypsilon
-    elif [ "$1" = test ]; then
-	shift
-	test_file="../../systems/$1/tests/tests.scm"
-	shift
-	cd targets/ypsilon && ypsilon --r6rs \
-            ../../scripts/run-tests.sps "$test_file" "$@"
-    else
-	cd targets/ypsilon && ypsilon --r6rs "$@"
-    fi
-}
-
-#
-# main body follows
-#
-
-impl="$1"
-if [ -z "$impl" ]; then
-    echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
-    exit 1
-fi
-
-case "$impl" in
-    (ikarus|larceny|mzscheme|ypsilon)
-	launch="launch_$impl"
-	;;
-    *) 
-	echo "Unsupported implementation '$impl'; patches welcome ;-)"
-	exit 1
-	;;
-esac
-shift
 
 set -e
-
-$launch "$@"
+launch "$@"
