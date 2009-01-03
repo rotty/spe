@@ -1,0 +1,140 @@
+body {
+  background-color: white;
+  margin: 0;
+  color: #000;
+  font-family: sans-serif;
+}
+
+div#body { 
+  margin-right: auto;
+  margin-left: auto;
+  margin-top: 5%;
+  background: white;
+  max-width: 50em;
+  padding-bottom: 1em;
+  padding-left: 2em;
+  padding-right: 2em;
+}
+
+div#heading, h1, h2, h3, h4 { 
+  font-family: monospace;
+}
+
+h1#heading
+{
+  background-color: #BCCFEF;
+  border: 1px solid #929DAF;
+}
+
+.structure {  
+  font-family: monospace;
+  font-weight: bold;
+}
+
+table#structures td { 
+  vertical-align: middle;
+}
+
+table#systems td { 
+  vertical-align: middle;
+}
+
+h1, h2 { 
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+h2 { 
+  padding-top: 1em;
+  margin: 0;
+}
+
+#content a:link { 
+  color: #00f;
+  text-decoration: none;
+}
+
+#content a:visited { 
+  color: #800;
+  text-decoration: none;
+}
+
+#content a:hover:link, a:active:link { 
+  color: #eee;
+  background-color: #00f;
+}
+
+#content a:hover:visited, a:active:visited { 
+  color: #eee;
+  background-color: #800;
+}
+
+#heading a:link,
+#heading a:active,
+#heading a:visited,
+#heading a:hover
+{ 
+  color: #000; 
+}
+
+div#footer {
+  text-align: center;
+  font-style: italic;
+  font-size: smaller;
+  padding-bottom: 1em;
+}
+
+td { vertical-align: top; }
+
+blockquote {
+    background-color: rgb(240, 240, 240);
+    border: 1pt solid black;
+    padding-left: 15pt;
+    padding-right: 15pt
+}
+
+a img { border: none }
+
+input { border: 1pt solid #d1e0ee; width: 300px }
+
+textarea { border: 1pt solid #d1e0ee; width: 300px }
+
+#content h1  {
+    border-bottom: 5px solid #000;
+}
+
+#content h2  {
+    border-bottom: 2px solid #000;
+}
+
+#content h3  {
+    border-bottom: 1px solid #d1e0ee;
+    border-top: 1px solid #d1e0ee;
+}
+
+.quicklinks { float: right }
+
+#navhead { 
+  margin-top: 0;
+  padding-left: 4px;
+  border-bottom: 2px solid #000;
+}
+
+#nav {
+  position: fixed;
+  margin-top: 1em;
+  width: 20%;
+  left: 79%;
+}
+
+.pic {   
+  float: right;
+  position: relative;
+  margin-left: 10px;
+}
+
+#content .right { 
+  margin-left: auto;
+  text-align: right;
+}
