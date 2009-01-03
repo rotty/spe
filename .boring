@@ -38,3 +38,7 @@
 ^systems/
 ^targets/
 ^\+
+
+# Generated docs
+^doc/html/system-reference/.*\.html$
+
