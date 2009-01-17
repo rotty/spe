@@ -72,8 +72,9 @@ function launch() {
             repl="rlwrap mzscheme -i"
             ;;
         ypsilon)
+            export YPSILON_SITELIB="`pwd`/targets/ypsilon:`pwd`:$YPSILON_SITELIB"
             run_r6rs_script="ypsilon --r6rs"
-            repl=
+            repl="rlwrap ypsilon"
             ;;
         larceny)
             run_r6rs_script="larceny -r6rs -path targets/larceny -program"
