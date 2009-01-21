@@ -72,7 +72,7 @@
 (define (libname-converter impl)
   (case impl
     ((larceny) values)
-    ((ikarus ypsilon) (lambda (libname) (escape-libname libname values)))
+    ((ikarus ypsilon) (lambda (libname) (escape-libname libname)))
     ((mzscheme) pltify-libname)
     (else
      (error 'libname-converter "not implemented for this implementation" impl))))
@@ -85,25 +85,31 @@
                  " "
                  (libname->path libname))))))
 
-(define (escape-symbol symbol maybe-upcase)
+
+(define (char-percent-escape c)
+  (let ((n (char->integer c)))
+    (string-append "%" (string-downcase (number->string n 16)))))
+
+(define (escape-symbol symbol)
   (string->symbol
    (apply string-append (map (lambda (c)
                                (case c
-                                 ((#\*) (string #\% #\2 (maybe-upcase #\a)))
-                                 (else (string c))))
+                                 ((#\* #\:)
+                                  (char-percent-escape c))
+                                 (else
+                                  (string c))))
                              (string->list (symbol->string symbol))))))
 
-(define (escape-libname libname maybe-upcase)
+(define (escape-libname libname)
   (map (lambda (part)
-         (cond ((symbol? part) (escape-symbol part maybe-upcase))
+         (cond ((symbol? part) (escape-symbol part))
                (else part)))
        libname))
 
 (define (pltify-libname libname)
   (escape-libname (if (= (length libname) 1)
                       (append libname '(main))
-                      libname)
-                  values))
+                      libname)))
 
 (define (basename path)
   (cond ((string-index-right path #\/)
