@@ -52,7 +52,7 @@ setup() {
 # implementation specific routines
 #
 
-function launch() {
+launch() {
     impl="$1"
     if [ -z "$impl" ]; then
         echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
