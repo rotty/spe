@@ -7,7 +7,7 @@ if [ ! -d systems/xitomatl/srfi ]; then
     bzr checkout --lightweight \
         lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/xitomatl/srfi
 fi
-for system in spells testeez; do
+for system in spells testeez rcs42; do
     if [ ! -d systems/$system ]; then
         darcs get --lazy --set-scripts-executable \
             http://download.gna.org/spells/darcs/r6rs/$system systems/$system
