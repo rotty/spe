@@ -1,15 +1,40 @@
 #!/bin/sh
 
+## Commandline param handling
+IMPL=none
+CONFIG=all
+
+if [ -n "$1" ]; then
+    IMPL="$1"
+    shift
+fi
+if [ -n "$1" ]; then
+    CONFIG="$1"
+    shift
+fi
+
+## Fetch packages required for running rcs42
 if [ ! -d systems/xitomatl ]; then
     bzr checkout --lightweight lp:~rotty/ikarus-libraries/xitomatl systems/xitomatl
 fi
-if [ ! -d systems/xitomatl/srfi ]; then
+if [ ! -d systems/srfi ]; then
     bzr checkout --lightweight \
-        lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/xitomatl/srfi
+        lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/srfi
 fi
-for system in spells testeez rcs42; do
+for system in spells rcs42; do
     if [ ! -d systems/$system ]; then
         darcs get --lazy --set-scripts-executable \
             http://download.gna.org/spells/darcs/r6rs/$system systems/$system
     fi
 done
+
+## Prepare symlink tree
+./scripts/launch "$IMPL" symlink
+
+## Fetch additional stuff using rcs42, iff the user has provided an
+## implementation to use
+if [ "$IMPL" != none ]; then
+    ./scripts/launch "$IMPL" ./systems/rcs42/scripts/rcs42.sps \
+        pull configs/"$CONFIG".cfg
+    ./scripts/launch "$IMPL" symlink
+fi
