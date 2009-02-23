@@ -89,25 +89,52 @@ launch() {
     setup_cmd="$run_r6rs_script scripts/setup.scm"
     if [ $# -eq 0 ]; then
         $repl
-    elif [ "$1" = symlink ]; then
-	setup "$impl" "$setup_cmd" symlinks "$impl"
-    elif [ "$1" = compile ]; then
-	setup "$impl" "$setup_cmd" symlinks "$impl"
-	setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
-    elif [ "$1" = recompile ]; then
-	setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
-    elif [ "$1" = test ]; then
-	shift
-	test_file="systems/$1/tests/tests.scm"
-	shift
-	$run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
-    elif [ "$1" = make-doc ]; then
-        rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
-        $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
-            "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
-    else
-	$run_r6rs_script "$@"
+        exit 0
     fi
+    case "$1" in
+        symlink)
+	    setup "$impl" "$setup_cmd" symlinks "$impl"
+            ;;
+        compile)
+	    setup "$impl" "$setup_cmd" symlinks "$impl"
+	    setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
+            ;;
+        recompile)
+	    setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
+            ;;
+        test)
+	    shift
+	    test_file="systems/$1/tests/tests.scm"
+	    shift
+	    $run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
+            ;;
+        pull)
+            shift
+            $run_r6rs_script systems/rcs42/scripts/rcs42.sps pull "$@"
+            ./scripts/configure
+            setup "$impl" "$setup_cmd" symlinks "$impl"
+            ;;
+        push)
+            shift
+            $run_r6rs_script systems/rcs42/scripts/rcs42.sps push "$@"
+            ;;
+        dist)
+            shift
+            $run_r6rs_script systems/rcs42/scripts/rcs42.sps dist "$@"
+            ;;
+        diff)
+            shift
+            $run_r6rs_script systems/rcs42/scripts/rcs42.sps diff "$@"
+            ;;
+        make-doc)
+            rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
+            $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
+                "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
+            ;;
+        *)
+	    $run_r6rs_script "$@"
+            ;;
+    esac
 }
 
 set -e
