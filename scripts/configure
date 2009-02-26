@@ -1,8 +1,35 @@
 #!/bin/sh
 
+have_autoconf=false
+if command -v autoconf > /dev/null; then
+    have_autoconf=true
+fi
+
 cd systems
 for system in *; do
-    if [ -x "$system/autogen.sh" ]; then
-        (cd "$system" && ./autogen.sh)
+    uses_autoconf=false
+    if [ -f "$system/configure.ac" ]; then
+        uses_autoconf=true
+    fi
+
+    if [ -f "$system/configure" ]; then
+        if [ "$uses_autoconf" = true ] \
+            && [ "$system/configure.ac" -nt "$system/configure" ]; then
+            echo "** $system/configure is stale"
+            if [ "$have_autoconf" != true ]; then
+                echo "*** [WARNING] autoconf not found, will use" \
+                    "stale configure script"
+            else
+                (cd "$system" && autoreconf)
+            fi
+        fi
+        (cd "$system" && ./configure)
+    elif [ "$uses_autoconf" = true ] && [ "$have_autoconf" != true ]; then
+        echo "** System '$system' appears to use autoconf, but autoconf was not"
+        echo '** found in $PATH, and there was no pre-built configure script.'
+        echo "** [ERROR] Skipping configuration of '$system'."
+    elif [ "$uses_autoconf" = true ]; then
+        echo "** Now generating configure script for '$system'"
+        (cd "$system" && autoreconf && ./configure)
     fi
 done
