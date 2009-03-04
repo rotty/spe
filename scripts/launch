@@ -62,7 +62,7 @@ launch() {
     impl="$1"; shift
     case "$impl" in
         ikarus)
-            export IKARUS_LIBRARY_PATH="$IKARUS_LIBRARY_PATH:`pwd`/targets/ikarus"
+            export IKARUS_LIBRARY_PATH="`pwd`/targets/ikarus:$IKARUS_LIBRARY_PATH"
             run_r6rs_script="ikarus --r6rs-script"
             repl="rlwrap ikarus"
             ;;
