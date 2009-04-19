@@ -193,17 +193,20 @@
       (read port)))))
 
 (define (process-library sys-path filename library-action include-action)
-  (let ((form (guard (c
-                      ((error? c)
-                       (message "error while processing library in " sys-path "/" filename ":")
-                       (if (message-condition? c)
-                           (message (condition-message c))
-                           (message "no error message available"))
-                       'error))
+  (define (print-error c)
+    (message "error while processing library in " sys-path "/" filename ":")
+    (if (message-condition? c)
+        (message (condition-message c))
+        (message "no error message available")))
+  (let ((form (guard (c ((error? c) (print-error c) 'error))
                 (call-with-input-file (string-append sys-path "/" filename)
                   read-library))))
     (cond
      ((eq? form 'error)
+      #f)
+     ((or (not (list? form))
+          (< (length form) 4))
+      (print-error (make-message-condition "invalid library form"))
       #f)
      (else
       (let ((lib-name (cadr form))
