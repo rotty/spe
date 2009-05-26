@@ -182,15 +182,14 @@
                  (set! compiled-libraries (cons lib-name compiled-libraries)))))
         (compile-lib! lib-name (extract-imported-libs import-form))))))
 
-(define (read-library port)
-  (let ((first-line (get-line port)))
+(define (read-library filename)
+  (let ((first-line (call-with-input-file filename get-line)))
     (cond
      ((string-prefix? first-line ";;;(library ")
       (read (open-string-input-port
              (substring first-line 3 (string-length first-line)))))
      (else
-      (set-port-position! port 0)
-      (read port)))))
+      (call-with-input-file filename read)))))
 
 (define (process-library sys-path filename library-action include-action)
   (define (print-error c)
@@ -199,8 +198,7 @@
         (message (condition-message c))
         (message "no error message available")))
   (let ((form (guard (c ((error? c) (print-error c) 'error))
-                (call-with-input-file (string-append sys-path "/" filename)
-                  read-library))))
+                (read-library (string-append sys-path "/" filename)))))
     (cond
      ((eq? form 'error)
       #f)
