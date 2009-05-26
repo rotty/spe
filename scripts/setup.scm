@@ -72,7 +72,7 @@
 (define (libname-converter impl)
   (case impl
     ((larceny) values)
-    ((ikarus ypsilon) (lambda (libname) (escape-libname libname)))
+    ((ikarus ypsilon mosh) (lambda (libname) (escape-libname libname)))
     ((mzscheme) pltify-libname)
     (else
      (error 'libname-converter "not implemented for this implementation" impl))))

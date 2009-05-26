@@ -77,8 +77,13 @@ launch() {
             repl="rlwrap ypsilon"
             ;;
         larceny)
-            run_r6rs_script="larceny -r6rs -path targets/larceny -program"
-            repl="rlwrap larceny -path targets/larceny -err5rs"
+            run_r6rs_script="larceny -r6rs -path `pwd`/targets/larceny -program"
+            repl="rlwrap larceny -path `pwd`/targets/larceny -err5rs"
+            ;;
+        mosh)
+            export MOSH_LOADPATH="`pwd`/targets/mosh"
+            run_r6rs_script="mosh"
+            repl="rlwrap mosh"
             ;;
         *)
             echo "Unsupported implementation '$impl'; patches welcome ;-)"
