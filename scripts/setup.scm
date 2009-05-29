@@ -13,7 +13,7 @@
 
 (define *silent* #f)
 
-(define *implementations* '(ikarus mzscheme larceny ypsilon))
+(define *implementations* '(ikarus mzscheme larceny ypsilon mosh))
 
 ;; entry point
 (define (main args)
