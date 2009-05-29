@@ -107,6 +107,10 @@ launch() {
         recompile)
 	    setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
             ;;
+        build)
+            shift
+            $run_r6rs_script scripts/build.sps "$@"
+            ;;
         test)
 	    shift
 	    test_file="systems/$1/tests/tests.scm"
