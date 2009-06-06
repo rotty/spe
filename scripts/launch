@@ -13,14 +13,7 @@ clean_symlink_tree() {
     while [ -n "$1" ]; do
 	args="$args -a ! -name $1"; shift
     done
-    findcmd="find $dir ! -type l -a ! -type d $args"
-    if [ `$findcmd | wc -l` -ne 0 ]; then
-        $findcmd
-	echo "tree $dir is dirty, aborting"
-	exit 1
-    fi
-    rm -rf "$dir"
-    mkdir -p "$dir"
+    find "$dir" -type l -delete
 }
 
 setup_no_symlinks() {
