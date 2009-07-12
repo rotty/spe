@@ -1,143 +1,142 @@
 #!/bin/sh
 
+# launch --- A launcher script for several R6RS implementations
+
+# Copyright (C) 2009 Andreas Rottmann <a.rottmann@gmx.at>
+
+# This program is free software, you can redistribute it and/or
+# modify it under the terms of the new-style BSD license.
+
+# You should have received a copy of the BSD license along with this
+# program. If not, see <http://www.debian.org/misc/bsd.license>.
+
+
 #
 # helpers
 #
 
 clean_symlink_tree() {
     if [ ! -d "$1" ]; then
-	return
+        return
     fi
     dir="$1"; shift
-    args=""
-    while [ -n "$1" ]; do
-	args="$args -a ! -name $1"; shift
-    done
     find "$dir" -type l -delete
 }
 
-setup_no_symlinks() {
-    impl="$1"; shift
-    program="$1"; shift
-    find systems -type f -name "*.sls" ! -path "*/_darcs/*" | $program "$@"
-}
-
-setup() {
-    impl="$1"
-    target_dir="targets/$impl"
-    shift
-    clean_symlink_tree "$target_dir" "*.slfasl" "*.ikarus-fasl" "*.dep" "*.zo"
-    setup_no_symlinks $impl "$@" | while read source dest; do
-	dest=`echo "$dest" | sed "s,^,$target_dir/,g"`
-	mkdir -p `dirname "$dest"`
-	if [ -L "$dest" ] && [ `readlink "$dest"` = "$source" ]; then
-	    true # multiple include, that's ok
-	elif [ -e "$dest" ]; then
-	    echo "$dest already exists, cannot link to $source, aborting"
-	    exit 1
-	else
-	    ln -s "$source" "$dest"
-	fi
+make_symlinks() {
+    mkdir -p r6rs-libs
+    clean_symlink_tree r6rs-libs
+    find systems -mindepth 1 -maxdepth 1 -type d | $run_r6rs_script scripts/setup.sps symlinks | while read source dest; do
+        dest=`echo "$dest" | sed "s,^,r6rs-libs/,g"`
+        mkdir -p `dirname "$dest"`
+        if [ -e "$dest" ]; then
+            echo "$dest already exists, cannot link to $source, aborting"
+            exit 1
+        else
+            ln -s "../$source" "$dest"
+        fi
     done
 }
 
 #
-# implementation specific routines
+# main script
 #
 
-launch() {
-    impl="$1"
-    if [ -z "$impl" ]; then
-        echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
-        exit 1
-    fi
-
-    impl="$1"; shift
-    case "$impl" in
-        ikarus)
-            export IKARUS_LIBRARY_PATH="`pwd`/targets/ikarus:$IKARUS_LIBRARY_PATH:`pwd`"
-            run_r6rs_script="ikarus --r6rs-script"
-            repl="rlwrap ikarus"
-            ;;
-        mzscheme)
-            export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/targets/mzscheme:`pwd`"
-            run_r6rs_script="mzscheme -l errortrace -u"
-            repl="rlwrap mzscheme -i"
-            ;;
-        ypsilon)
-            export YPSILON_SITELIB="`pwd`/targets/ypsilon:$YPSILON_SITELIB:`pwd`"
-            run_r6rs_script="ypsilon --r6rs"
-            repl="rlwrap ypsilon"
-            ;;
-        larceny)
-            run_r6rs_script="larceny -r6rs -path `pwd`/targets/larceny -program"
-            repl="rlwrap larceny -path `pwd`/targets/larceny -err5rs"
-            ;;
-        mosh)
-            export MOSH_LOADPATH="`pwd`/targets/mosh"
-            run_r6rs_script="mosh"
-            repl="rlwrap mosh"
-            ;;
-        *)
-            echo "Unsupported implementation '$impl'; patches welcome ;-)"
-            exit 1
-            ;;
-    esac
-    
-    setup_cmd="$run_r6rs_script scripts/setup.scm"
-    if [ $# -eq 0 ]; then
-        $repl
-        exit 0
-    fi
-    case "$1" in
-        symlink)
-	    setup "$impl" "$setup_cmd" symlinks "$impl"
-            ;;
-        compile)
-	    setup "$impl" "$setup_cmd" symlinks "$impl"
-	    setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
-            ;;
-        recompile)
-	    setup_no_symlinks "$impl" "$setup_cmd" compile "$impl" targets/"$impl"
-            ;;
-        build)
-            shift
-            $run_r6rs_script scripts/build.sps "$@"
-            ;;
-        test)
-	    shift
-	    test_file="systems/$1/tests/tests.scm"
-	    shift
-	    $run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
-            ;;
-        pull)
-            shift
-            $run_r6rs_script systems/rcs42/scripts/rcs42.sps pull "$@"
-            ./scripts/configure
-            setup "$impl" "$setup_cmd" symlinks "$impl"
-            ;;
-        push)
-            shift
-            $run_r6rs_script systems/rcs42/scripts/rcs42.sps push "$@"
-            ;;
-        dist)
-            shift
-            $run_r6rs_script systems/rcs42/scripts/rcs42.sps dist "$@"
-            ;;
-        diff)
-            shift
-            $run_r6rs_script systems/rcs42/scripts/rcs42.sps diff "$@"
-            ;;
-        make-doc)
-            rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
-            $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
-                "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
-            ;;
-        *)
-	    $run_r6rs_script "$@"
-            ;;
-    esac
-}
-
 set -e
-launch "$@"
+
+impl="$1"
+if [ -z "$impl" ]; then
+    echo "Usage: scripts/launch <impl> [<command> [<option> ...]]"
+    exit 1
+fi
+
+if command -v rlwrap > /dev/null; then
+    rlwrap=rlwrap
+else
+    rlwrap=""
+fi
+
+# implementation specifics
+
+impl="$1"; shift
+case "$impl" in
+    ikarus)
+        export IKARUS_LIBRARY_PATH="`pwd`/r6rs-libs:$IKARUS_LIBRARY_PATH:`pwd`"
+        run_r6rs_script="ikarus --r6rs-script"
+        repl="$rlwrap ikarus"
+        ;;
+    mzscheme)
+        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/r6rs-libs:`pwd`"
+        run_r6rs_script="mzscheme -l errortrace -u"
+        repl="$rlwrap mzscheme -i"
+        ;;
+    ypsilon)
+        export YPSILON_SITELIB="`pwd`/r6rs-libs:$YPSILON_SITELIB:`pwd`"
+        run_r6rs_script="ypsilon --r6rs"
+        repl="$rlwrap ypsilon"
+        ;;
+    larceny)
+        run_r6rs_script="larceny -r6rs -path `pwd`/r6rs-libs -program"
+        repl="$rlwrap larceny -path `pwd`/r6rs-libs -err5rs"
+        ;;
+    mosh)
+        export MOSH_LOADPATH="`pwd`/r6rs-libs"
+        run_r6rs_script="mosh"
+        repl="$rlwrap mosh"
+        ;;
+    *)
+        echo "Unsupported implementation '$impl'; patches welcome ;-)"
+        exit 1
+        ;;
+esac
+
+if [ $# -eq 0 ]; then
+    $repl
+    exit 0
+fi
+
+# command dispatcher
+
+case "$1" in
+    symlink)
+        shift
+        make_symlinks "$impl"
+        ;;
+    build)
+        shift
+        make_symlinks "$impl"
+        $run_r6rs_script scripts/build.sps "$@"
+        ;;
+    test)
+        shift
+        test_file="systems/$1/tests/tests.scm"
+        shift
+        $run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
+        ;;
+    pull)
+        shift
+        $run_r6rs_script systems/conjure/scripts/rcs42.sps pull "$@"
+        make_symlinks "$impl"
+        $run_r6rs_script scripts/build.sps
+        ;;
+    push)
+        shift
+        $run_r6rs_script systems/conjure/scripts/rcs42.sps push "$@"
+        ;;
+    dist)
+        shift
+        $run_r6rs_script systems/conjure/scripts/rcs42.sps dist "$@"
+        ;;
+    diff)
+        shift
+        $run_r6rs_script systems/conjure/scripts/rcs42.sps diff "$@"
+        ;;
+    make-doc)
+        rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
+        $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
+            "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
+        ;;
+    *)
+        $run_r6rs_script "$@"
+        ;;
+esac

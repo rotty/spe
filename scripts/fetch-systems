@@ -2,7 +2,7 @@
 
 ## Commandline param handling
 IMPL=none
-CONFIG=all
+CONFIG=base
 
 if [ -n "$1" ]; then
     IMPL="$1"
@@ -14,19 +14,19 @@ if [ -n "$1" ]; then
 fi
 
 ## Git doesn't keep empty dirs
-mkdir -p systems targets
+mkdir -p systems r6rs-libs
 
 ## Fetch packages required for running rcs42 and scripts/build.sps
 echo "= Getting base systems"
 
 if [ ! -d systems/xitomatl ]; then
-    bzr checkout --lightweight lp:~rotty/ikarus-libraries/xitomatl systems/xitomatl
+    bzr checkout --lightweight lp:~rotty/scheme-libraries/xitomatl systems/xitomatl
 fi
 if [ ! -d systems/srfi ]; then
     bzr checkout --lightweight \
-        lp:~ikarus-libraries-team/ikarus-libraries/srfi systems/srfi
+        lp:~scheme-libraries-team/scheme-libraries/srfi systems/srfi
 fi
-for system in spells rcs42 prometheus fmt conjure; do
+for system in spells prometheus conjure; do
     if [ ! -d systems/$system ]; then
         git clone git://github.com/rotty/$system.git systems/$system
     fi
@@ -43,11 +43,8 @@ echo "= Preparing symlink tree for $IMPL"
 ./scripts/launch "$IMPL" symlink
 
 echo "= Fetching additional systems, using config '$CONFIG'"
-./scripts/launch "$IMPL" ./systems/rcs42/scripts/rcs42.sps \
+./scripts/launch "$IMPL" ./systems/conjure/scripts/rcs42.sps \
     pull configs/"$CONFIG".cfg
 
-echo "= Recreating symlink tree for $IMPL"
-./scripts/launch "$IMPL" symlink
-
-echo "= Running build script"
-./scripts/launch "$IMPL" ./scripts/build.sps
+echo "= Starting build using $IMPL"
+./scripts/launch "$IMPL" build

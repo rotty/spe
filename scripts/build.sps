@@ -53,8 +53,7 @@
                '(srfi :39 parameters)
                '(conjure dsl)))
 
-(define product-dir (pathname-join '(("targets"))
-                                   (symbol->string (scheme-implementation))))
+(define product-dir (x->pathname '(("r6rs-libs"))))
 
 (define (system-buildproc sys-name sys-dir forms)
   (lambda (step)
