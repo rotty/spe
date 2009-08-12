@@ -1,63 +1,20 @@
-# -*- org -*-
+# -*- outline -*-
 
 * About
 
-This is SPE, a small set of scripts to make it easier to do multi-implementation
-development of R6RS libraries.
+This is SPE, a small set of scripts to make it easier to do
+multi-implementation development of R6RS libraries.
 
-* Usage
+* Documentation
 
-If you've just downloaded SPE, you can get library collections (aka
-"systems"), with this invocation:
+Please see docs/index.org for some documentation in Emacs org-mode
+(i.e. basically plain-text) format. You can also view this
+documentation in HTML form at http://rotty.yi.org/software/spe/.
 
-: ./scripts/fetch-systems $IMPL $CONFIG
+* License
 
-In the above command line, substitute ~$IMPL~ with your Scheme
-implementation's name, e.g. ~ikarus~ or ~ypsilon~. ~$CONFIG~ specifies
-what set of systems you want to download. Have a look into the
-~configs/~ directory for what sets are available, the file named
-~configs/$CONFIG.cfg~ will be used. Useful values of ~$CONFIG~
-include:
+SPE is free software licensed under the new-style BSD license; see the
+file COPYING for the exact license term.
 
-  - ~base~ :: systems used by SPE itself
-  - ~all~ :: all systems packaged for SPE
-
-After you have fetched at least the ~base~ set of systems, you can use
-the ~launch~ script, which launches the specified Scheme
-implementation so that the libraries from all fetched system will be
-available.
-
-** Launch a REPL
-
-: ./scripts/launch $IMPL
-
-** Launch a R6RS script
-
-: ./scripts/launch $IMPL /path/to/script.sps
-
-** Run a test suite
-
-For systems that come with a SPE-compatible test suite, this command will run
-it:
-
-: ./scripts/launch $IMPL test $SYSTEM
-
-** Recreate the symlink tree 
-
-Needed when adding or removing libraries.
-
-: ./scripts/launch $IMPL symlink
-
-** Fetch system updates from VCS repositories
-
-: ./scripts/launch $IMPL pull configs/base.cfg
-
-** Rebuild
-
-Each system may have a ~sys-def.scm~ file in its top directory, which
-may contain build instructions. The following command walks through
-those ~sys-def.scm~ files and executes the build instructions,
-respecting system dependencies (which are also specified in
-~sys-def.scm~):
-
-: ./scripts/launch $IMPL build
+--
+Andreas Rottmann <a.rottmann@gmx.at>, September 2009

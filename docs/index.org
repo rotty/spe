@@ -1,0 +1,83 @@
+# -*- org -*-
+
+#+SETUPFILE: ~/.emacs.d/org-templates/level-2.org
+#+TITLE: spe
+
+* About
+
+This is the documentation for SPE, a small set of scripts to make it
+easier to do multi-implementation development of R6RS libraries.
+
+SPE is organized around the notion of "systems" (this terminology is
+borrowed from Common Lisp). A system is a collection of R6RS
+libraries, optionally accompanies by a ~sys-def.scm~ file, which
+specifies metadata about the system:
+
+- the system name
+- dependencies on other systems
+- which files or directories are to be injected into the Scheme
+  implementations' library path
+- build instructions, if some files need to generated[fn:1]
+
+* Usage
+
+If you've just downloaded SPE, you can get  (aka
+"systems"), with this invocation:
+
+: ./scripts/fetch-systems $IMPL $CONFIG
+
+In the above command line, substitute ~$IMPL~ with your Scheme
+implementation's name, e.g. ~ikarus~ or ~ypsilon~. ~$CONFIG~ specifies
+what set of systems you want to download. Have a look into the
+~configs/~ directory for what sets are available, the file named
+~configs/$CONFIG.cfg~ will be used. Useful values of ~$CONFIG~
+include:
+
+  - ~base~ :: systems used by SPE itself, this is the default
+  - ~all~ :: all systems packaged for SPE
+
+After you have fetched at least the ~base~ set of systems, you can use
+the ~launch~ script, which launches the specified Scheme
+implementation so that the libraries from all fetched system will be
+available.
+
+Launch a REPL:
+
+: ./scripts/launch $IMPL
+
+Launch a R6RS script:
+
+: ./scripts/launch $IMPL /path/to/script.sps
+
+For systems that come with a SPE-compatible test suite, this command
+will run it.
+
+: ./scripts/launch $IMPL test $SYSTEM
+
+Fetch system updates from VCS repositories:
+
+: ./scripts/launch $IMPL pull configs/base.cfg
+
+** Rebuild
+
+When adding or removing systems, changing the library names, or
+changing the sources of built libraries (which typically have an
+~.sls.in~ extension) it might be necessary to (re)build.
+
+Each system may have a ~sys-def.scm~ file in its top directory, which
+in turn may contain build instructions. The following command walks
+through those ~sys-def.scm~ files and executes the build instructions,
+respecting system dependencies (which are also specified in
+~sys-def.scm~):
+
+: ./scripts/launch $IMPL build
+
+
+* Footnotes
+
+[fn:1] While R6RS code can largely eschew being "preprocessed", by
+using macros, this is not possible for e.g. the ~export~ list of
+~library~ forms. Another reason is injecting platform-specific
+information into the source; while this is possible using macros, it
+might be desirable to avoid, for example, having to run the C compiler
+on the target machine.
