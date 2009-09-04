@@ -29,24 +29,29 @@
         (rnrs eval)
         (except (srfi :1 lists) for-each map)
         (srfi :39 parameters)
+        (spells fmt)
         (spells match)
         (spells pathname)
         (spells filesys)
         (spells misc)
         (spells logging)
         (spells tracing)
+        (prometheus)
+        (conjure utils)
         (conjure base)
         (conjure task-lib)
         (conjure dsl))
 
 (register-builtin-tasks)
 
-(configure-logger '(conjure)
+(configure-logger '()
                   `((threshold info)
                     (handlers
                      ,(lambda (entry)
                         (default-log-formatter entry
                           (current-output-port))))))
+
+(define log/spe (make-fmt-log '(spe build)))
 
 (define default-conj-environment
   (environment '(rnrs)
@@ -55,25 +60,39 @@
 
 (define product-dir (x->pathname '(("r6rs-libs"))))
 
-(define (system-buildproc sys-name sys-dir forms)
-  (lambda (step)
-    (define (do-eval forms env)
-      (with-project (<project> 'new sys-name
-                               '()
-                               `((source-dir ,(pathname-join
-                                               ((step 'project) 'source-dir)
-                                               sys-dir))))
-        (lambda ()
-          (eval `(let () ,@forms) env)
-          ((current-project) 'build-rec))))
-    (for-each display (list "* Building system " sys-name "\n"))
-    (match forms
-      ((('import import-specs ___) body0 body ___)
-       (do-eval (cons body0 body) (apply environment import-specs)))
-      ((body0 body ___)
-       (do-eval (cons body0 body) default-conj-environment))
-      (_
-       #f))))
+(define (make-triggered-delegator obj triggers thunk)
+  (let ((clone (obj 'clone)))
+    (define (trigger-method msg)
+      (lambda (self resend . args)
+        (thunk)
+        (for-each (lambda (trigger)
+                    (self 'delete-slot! trigger))
+                  triggers)
+        (apply resend #f msg args)))
+    (for-each (lambda (trigger)
+                (clone 'add-method-slot! trigger (trigger-method trigger)))
+              triggers)
+    clone))
+
+(define (make-system-project parent sys-name sys-dir forms)
+  (let ((project (<project> 'new sys-name
+                            '()
+                            `((source-dir ,(pathname-join
+                                            (parent 'source-dir)
+                                            sys-dir))))))
+    (make-triggered-delegator
+     project
+     '(construct-step)
+     (lambda ()
+       (with-project project
+         (lambda ()
+           (match forms
+             ((('import import-specs ___) body0 body ___)
+              (eval `(let () ,@(cons body0 body)) (apply environment import-specs)))
+             ((body0 body ___)
+              (eval `(let () ,@(cons body0 body)) default-conj-environment))
+             (_
+              #f))))))))
 
 (define (system-task-name sym)
   (string->symbol (string-append "system/" (symbol->string sym))))
@@ -85,24 +104,22 @@
                     '()))
               alist))
 
-(define (sys-defs->tasks pathname)
+(define (sys-defs->projects pathname parent)
   (call-with-input-file (x->namestring pathname)
     (lambda (port)
       (filter-map
        (lambda (form)
          (match form
            (('define-system name clauses ___)
-            (let ((deps (map system-task-name
-                             (alist-rhsides clauses 'dependencies)))
-                  (forms (alist-rhsides clauses 'conjure)))
-              (<ordinary-task>
-               'new
-               (system-task-name name)
-               '()
-               `((depends ,@deps)
-                 (proc ,(system-buildproc name
-                                          (pathname-with-file pathname #f)
-                                          forms))))))
+            (let ((project (make-system-project
+                            parent
+                            (system-task-name name)
+                            (pathname-with-file pathname #f)
+                            (alist-rhsides clauses 'conjure))))
+              (modify-object! project
+                (dependencies (map system-task-name
+                                   (alist-rhsides clauses 'dependencies))))
+              project))
            (_
             #f)))
        (port->sexps port)))))
@@ -118,12 +135,12 @@
      (let ((sys-def (pathname-join (pathname-as-directory pathname) "sys-def.scm")))
        (when (file-exists? sys-def)
          (for-each (lambda (task) ((current-project) 'add-task task))
-                   (sys-defs->tasks sys-def))))
+                   (sys-defs->projects sys-def (current-project)))))
      #f)
    #f))
 
 (spe-project 'invoke (cdr (command-line)))
 
 ;; Local Variables:
-;; scheme-indent-styles: (conjure-dsl)
+;; scheme-indent-styles: (conjure-dsl (match 1) (modify-object! 1) (object 1))
 ;; End:
