@@ -44,12 +44,12 @@
 
 (register-builtin-tasks)
 
-(configure-logger '()
-                  `((threshold info)
-                    (handlers
-                     ,(lambda (entry)
-                        (default-log-formatter entry
-                          (current-output-port))))))
+(set-logger-properties!
+ root-logger
+ `((threshold info)
+   (handlers
+    ,(lambda (entry)
+       (default-log-formatter entry (current-output-port))))))
 
 (define log/spe (make-fmt-log '(spe build)))
 
