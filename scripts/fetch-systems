@@ -19,9 +19,6 @@ mkdir -p systems r6rs-libs
 ## Fetch packages required for running rcs42 and scripts/build.sps
 echo "= Getting base systems"
 
-if [ ! -d systems/xitomatl ]; then
-    bzr checkout --lightweight lp:~rotty/scheme-libraries/xitomatl systems/xitomatl
-fi
 if [ ! -d systems/srfi ]; then
     bzr checkout --lightweight \
         lp:~scheme-libraries-team/scheme-libraries/srfi systems/srfi
