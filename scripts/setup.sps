@@ -6,81 +6,88 @@
   (let ((action (string->symbol (cadr args))))
     (case action
       ((symlinks)
-       (for-each system-symlink-lister
+       (for-each package-symlink-lister
                  (read-lines (current-input-port))))
       (else
        (error #f "invalid action" action)))))
 
-(define (system-symlink-lister sys-path)
-  (let ((sys-def-fname (string-append sys-path "/sys-def.scm")))
-    (if (file-exists? sys-def-fname)
-        (let* ((sys-def (call-with-input-file sys-def-fname read))
-               (r6rs-libs (and (pair? sys-def)
-                               (eq? (car sys-def) 'define-system)
-                               (assq 'r6rs-libraries (cddr sys-def)))))
-          (if r6rs-libs
-              (print-system-links sys-path (cdr r6rs-libs))
-              (print-default-system-links sys-path)))
-        (print-default-system-links sys-path))))
+(define (package-symlink-lister pkg-path)
+  (let ((pkg-def-fname (string-append pkg-path "/pkg-list.scm")))
+    (if (file-exists? pkg-def-fname)
+        (let* ((package-form (call-with-input-file pkg-def-fname read))
+               (libraries (and (pair? package-form)
+                               (eq? (car package-form) 'package)
+                               (assq 'libraries (cddr package-form)))))
+          (if libraries
+              (print-package-links pkg-path (cdr libraries))
+              (print-default-package-links pkg-path)))
+        (print-default-package-links pkg-path))))
 
-(define (print-default-system-links sys-path)
-  (println sys-path " " (basename sys-path)))
+(define (print-default-package-links pkg-path)
+  (print-link pkg-path " " (basename pkg-path)))
 
-(define (print-system-links sys-path specs)
+(define (print-package-links pkg-path specs)
   (for-each
    (lambda (spec)
-     (cond ((or (string? spec) (symbol? spec))
-            (print-link sys-path spec spec))
-           ((pair? spec)
-            (print-link sys-path (car spec) (cdr spec)))
+     (cond ((and (list? spec)
+                 (= 3 (length spec))
+                 (eq? '-> (cadr spec)))
+            (print-link pkg-path (car spec) (caddr spec)))
            (else
-            (error 'print-system-links "invalid spec" spec))))
+            (print-link pkg-path spec spec))))
    specs))
 
-(define (filespec->path name)
-  (cond ((symbol? name) (symbol->string name))
-        ((pair? name)
-         (string-join (map ->string name) "/"))
-        ((string? name) name)
-        (else (error 'filespec->path "invalid filespec"))))
-
-(define (filespec-ddepth filespec)
-  (cond ((symbol? filespec)
-         0)
-        ((pair? filespec)
-         (- (length filespec) 1))
-        ((string? filespec)
-         (string-count filespec #\/))
+(define (filespec->path spec)
+  (cond ((string? spec)
+         (list spec))
         (else
-         (error 'filespec-ddepth "invalid filespec" filespec))))
+         (let loop ((spec spec)
+                    (processed '()))
+           (cond ((null? spec)
+                  (reverse processed))
+                 ((symbol? spec)
+                  (loop '() processed))
+                 ((and (pair? spec)
+                       (string? (car spec)))
+                  (loop (cdr spec)
+                        (cons (car spec) processed)))
+                 (else
+                  (error 'filespec->path "unsupported filespec" spec)))))))
 
-(define (print-link sys-path target name)
-  (let ((n-up (filespec-ddepth name)))
+(define (path->namestring path)
+  (string-join path "/"))
+
+(define (filespec->namestring spec)
+  (path->namestring (filespec->path spec)))
+
+(define (print-link pkg-path target name)
+  (let* ((path (filespec->path name))
+         (n-up (- (length path) 1)))
     (if (= n-up 0)
-        (println sys-path "/" (filespec->path target)
+        (println pkg-path "/" (filespec->namestring target)
                  " "
-                 (filespec->path name))
+                 (filespec->namestring name))
         (println (string-join (make-list n-up "..") "/")
-                 "/" sys-path "/" (filespec->path target)
+                 "/" pkg-path "/" (filespec->namestring target)
                  " "
-                 (filespec->path name)))))
+                 (filespec->namestring name)))))
 
 
 ;;; Utilities
 
-(define (basename path)
-  (cond ((string-index-right path #\/)
+(define (basename namestring)
+  (cond ((string-index-right namestring #\/)
          => (lambda (i)
-              (substring path (+ i 1) (string-length path))))
+              (substring namestring (+ i 1) (string-length namestring))))
         (else
-         path)))
+         namestring)))
 
-(define (dirname path)
-  (cond ((string-index-right path #\/)
+(define (dirname namestring)
+  (cond ((string-index-right namestring #\/)
          => (lambda (i)
-              (substring path 0 i)))
+              (substring namestring 0 i)))
         (else
-         path)))
+         namestring)))
 
 (define (make-list len . maybe-elt)
   (let ((elt (cond ((null? maybe-elt) #f) ; Default value

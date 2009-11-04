@@ -42,15 +42,6 @@
         (conjure task-lib)
         (conjure dsl))
 
-(register-builtin-tasks)
-
-(set-logger-properties!
- root-logger
- `((threshold info)
-   (handlers
-    ,(lambda (entry)
-       (default-log-formatter entry (current-output-port))))))
-
 (define log/spe (make-fmt-log '(spe build)))
 
 (define default-conj-environment
@@ -74,7 +65,7 @@
               triggers)
     clone))
 
-(define (make-system-project parent sys-name sys-dir forms)
+(define (make-package-project parent sys-name sys-dir forms)
   (let ((project (<project> 'new sys-name
                             '()
                             `((source-dir ,(pathname-join
@@ -94,8 +85,10 @@
              (_
               #f))))))))
 
-(define (system-task-name sym)
-  (string->symbol (string-append "system/" (symbol->string sym))))
+(define (package-task-name package-name)
+  (match package-name
+    ((name . rest)
+     (string->symbol (string-append "package/" (symbol->string name))))))
 
 (define (alist-rhsides alist key)
   (append-map (lambda (entry)
@@ -104,21 +97,21 @@
                     '()))
               alist))
 
-(define (sys-defs->projects pathname parent)
+(define (packages->projects pathname parent)
   (call-with-input-file (x->namestring pathname)
     (lambda (port)
       (filter-map
        (lambda (form)
          (match form
-           (('define-system name clauses ___)
-            (let ((project (make-system-project
+           (('package name clauses ___)
+            (let ((project (make-package-project
                             parent
-                            (system-task-name name)
+                            (package-task-name name)
                             (pathname-with-file pathname #f)
                             (alist-rhsides clauses 'conjure))))
               (modify-object! project
-                (dependencies (map system-task-name
-                                   (alist-rhsides clauses 'dependencies))))
+                (dependencies (map package-task-name
+                                   (alist-rhsides clauses 'depends))))
               project))
            (_
             #f)))
@@ -132,14 +125,28 @@
   (directory-fold
    '(("systems"))
    (lambda (pathname state)
-     (let ((sys-def (pathname-join (pathname-as-directory pathname) "sys-def.scm")))
-       (when (file-exists? sys-def)
+     state ;ignored
+     (let ((pkg-list (pathname-with-file (pathname-as-directory pathname)
+                                         "pkg-list.scm")))
+       (when (file-exists? pkg-list)
          (for-each (lambda (task) ((current-project) 'add-task task))
-                   (sys-defs->projects sys-def (current-project)))))
+                   (packages->projects pkg-list (current-project)))))
      #f)
    #f))
 
-(spe-project 'invoke (cdr (command-line)))
+(define (main argv)
+  (register-builtin-tasks)
+
+  (set-logger-properties!
+   root-logger
+   `((threshold info)
+     (handlers
+      ,(lambda (entry)
+         (default-log-formatter entry (current-output-port))))))
+
+  (spe-project 'invoke (cdr argv)))
+
+(main (command-line))
 
 ;; Local Variables:
 ;; scheme-indent-styles: (conjure-dsl (match 1) (modify-object! 1) (object 1))
