@@ -24,18 +24,8 @@ clean_symlink_tree() {
 }
 
 make_symlinks() {
-    mkdir -p r6rs-libs
     clean_symlink_tree r6rs-libs
-    find systems -mindepth 1 -maxdepth 1 -type d | $run_r6rs_script scripts/setup.sps symlinks | while read source dest; do
-        dest=`echo "$dest" | sed "s,^,r6rs-libs/,g"`
-        mkdir -p `dirname "$dest"`
-        if [ -e "$dest" ]; then
-            echo "$dest already exists, cannot link to $source, aborting"
-            exit 1
-        else
-            ln -s "../$source" "$dest"
-        fi
-    done
+    doro symlink-bundle --force systems r6rs-libs
 }
 
 #
@@ -100,11 +90,11 @@ fi
 case "$1" in
     symlink)
         shift
-        make_symlinks "$impl"
+        make_symlinks
         ;;
     build)
         shift
-        make_symlinks "$impl"
+        make_symlinks
         $run_r6rs_script scripts/build.sps "$@"
         ;;
     test)
