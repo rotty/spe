@@ -61,17 +61,17 @@ fi
 impl="$1"; shift
 case "$impl" in
     ikarus)
-        export IKARUS_LIBRARY_PATH="`pwd`/r6rs-libs:$IKARUS_LIBRARY_PATH:`pwd`"
+        export IKARUS_LIBRARY_PATH="`pwd`/r6rs-libs:$IKARUS_LIBRARY_PATH"
         run_r6rs_script="ikarus --r6rs-script"
         repl="$rlwrap ikarus"
         ;;
     mzscheme)
-        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/r6rs-libs:`pwd`"
+        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/r6rs-libs"
         run_r6rs_script="mzscheme -l errortrace -u"
         repl="$rlwrap mzscheme -i"
         ;;
     ypsilon)
-        export YPSILON_SITELIB="`pwd`/r6rs-libs:$YPSILON_SITELIB:`pwd`"
+        export YPSILON_SITELIB="`pwd`/r6rs-libs:$YPSILON_SITELIB"
         run_r6rs_script="ypsilon --r6rs"
         repl="$rlwrap ypsilon"
         ;;
