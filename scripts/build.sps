@@ -49,7 +49,11 @@
                '(srfi :39 parameters)
                '(conjure dsl)))
 
-(define product-dir (x->pathname '(("r6rs-libs"))))
+(define product-dir
+  (->pathname
+   (case (scheme-implementation)
+     ((mzscheme) '(("plt-r6rs")))
+     (else       '(("r6rs-libs"))))))
 
 (define (make-triggered-delegator obj triggers thunk)
   (let ((clone (obj 'clone)))

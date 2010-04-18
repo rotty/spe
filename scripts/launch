@@ -2,7 +2,7 @@
 
 # launch --- A launcher script for several R6RS implementations
 
-# Copyright (C) 2009 Andreas Rottmann <a.rottmann@gmx.at>
+# Copyright (C) 2009, 2010 Andreas Rottmann <a.rottmann@gmx.at>
 
 # This program is free software, you can redistribute it and/or
 # modify it under the terms of the new-style BSD license.
@@ -19,13 +19,13 @@ clean_symlink_tree() {
     if [ ! -d "$1" ]; then
         return
     fi
-    dir="$1"; shift
-    find "$dir" -type l -delete
+    find "$1" -depth \( -type l -o \( -type d -empty \) \) -delete
 }
 
 make_symlinks() {
-    clean_symlink_tree r6rs-libs
-    doro symlink-bundle --force systems r6rs-libs
+    local dir="$1"; shift
+    clean_symlink_tree "$dir"
+    doro symlink-bundle --force "$@" systems "$dir"
 }
 
 #
@@ -46,8 +46,11 @@ else
     rlwrap=""
 fi
 
-# implementation specifics
 
+# A reasonable default
+symlink="make_symlinks r6rs-libs"
+
+# implementation specifics
 impl="$1"; shift
 case "$impl" in
     ikarus)
@@ -56,9 +59,10 @@ case "$impl" in
         repl="$rlwrap ikarus"
         ;;
     mzscheme)
-        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/r6rs-libs"
+        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/plt-r6rs"
         run_r6rs_script="mzscheme -l errortrace -u"
         repl="$rlwrap mzscheme -i"
+        symlink="make_symlinks plt-r6rs --exclude srfi"
         ;;
     ypsilon)
         export YPSILON_SITELIB="`pwd`/r6rs-libs:$YPSILON_SITELIB"
@@ -90,11 +94,11 @@ fi
 case "$1" in
     symlink)
         shift
-        make_symlinks
+        $symlink
         ;;
     build)
         shift
-        make_symlinks
+        $symlink
         $run_r6rs_script scripts/build.sps "$@"
         ;;
     test)
@@ -106,7 +110,7 @@ case "$1" in
     pull)
         shift
         $run_r6rs_script systems/conjure/scripts/rcs42.sps pull "$@"
-        make_symlinks "$impl"
+        $symlink "$impl"
         $run_r6rs_script scripts/build.sps
         ;;
     push)
