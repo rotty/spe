@@ -1,6 +1,6 @@
 ;;; build.sps --- Build script for SPE
 
-;; Copyright (C) 2009 Andreas Rottmann <a.rottmann@gmx.at>
+;; Copyright (C) 2009, 2010 Andreas Rottmann <a.rottmann@gmx.at>
 
 ;; Author: Andreas Rottmann <a.rottmann@gmx.at>
 
@@ -98,7 +98,7 @@
               alist))
 
 (define (packages->projects pathname parent)
-  (call-with-input-file (x->namestring pathname)
+  (call-with-input-file (->namestring pathname)
     (lambda (port)
       (filter-map
        (lambda (form)
@@ -137,17 +137,19 @@
 (define (main argv)
   (register-builtin-tasks)
 
-  (set-logger-properties!
-   root-logger
-   `((threshold info)
-     (handlers
-      ,(lambda (entry)
-         (default-log-formatter entry (current-output-port))))))
-
-  (spe-project 'invoke (cdr argv)))
+  (let-logger-properties
+      ((root-logger
+        `((threshold info)
+          (handlers
+           ,(lambda (entry)
+              (default-log-formatter entry (current-output-port)))))))
+    (spe-project 'invoke (cdr argv))))
 
 (main (command-line))
 
 ;; Local Variables:
-;; scheme-indent-styles: (conjure-dsl (match 1) (modify-object! 1) (object 1))
+;; scheme-indent-styles: (conjure-dsl as-match
+;;                        (let-logger-properties 1)
+;;                        (modify-object! 1)
+;;                        (object 1))
 ;; End:

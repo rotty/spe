@@ -1,3 +1,6 @@
-systems/
-r6rs-libs/
-docs/html/system-reference/*.html
+/systems/
+/r6rs-libs/
+/plt-r6rs
+/docs/html/system-reference/*.html
+/docs/html/system-reference/*/*.html
+/docs/html/system-reference/*/*/*.html
