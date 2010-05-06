@@ -2,6 +2,6 @@
 (import (rnrs base)
         (rnrs programs)
         (rnrs io simple)
-        (spells testing run))
+        (spells test-runner))
 
 (main (command-line))
