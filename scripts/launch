@@ -60,7 +60,7 @@ case "$impl" in
         ;;
     mzscheme)
         export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/plt-r6rs"
-        run_r6rs_script="mzscheme -l errortrace -u"
+        run_r6rs_script="plt-r6rs"
         repl="$rlwrap mzscheme -i"
         symlink="make_symlinks plt-r6rs --exclude srfi"
         ;;
