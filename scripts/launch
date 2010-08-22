@@ -25,7 +25,7 @@ clean_symlink_tree() {
 make_symlinks() {
     local dir="$1"; shift
     clean_symlink_tree "$dir"
-    doro symlink-bundle --force "$@" systems "$dir"
+    doro --no-config symlink-bundle --force "$@" systems "$dir"
 }
 
 #
