@@ -23,7 +23,12 @@ if [ ! -d systems/srfi ]; then
     bzr checkout --lightweight \
         lp:~scheme-libraries-team/scheme-libraries/srfi systems/srfi
 fi
-for system in spells prometheus conjure; do
+for system in wak-common wak-prometheus; do
+    if [ ! -d systems/$system ]; then
+        git clone git://gitorious.org/wak/$system.git systems/$system
+    fi
+done
+for system in spells conjure; do
     if [ ! -d systems/$system ]; then
         git clone git://github.com/rotty/$system.git systems/$system
     fi
