@@ -4,6 +4,8 @@
 IMPL=none
 CONFIG=base
 
+set -e
+
 if [ -n "$1" ]; then
     IMPL="$1"
     shift
@@ -19,16 +21,12 @@ mkdir -p systems r6rs-libs
 ## Fetch packages required for running rcs42 and scripts/build.sps
 echo "= Getting base systems"
 
-if [ ! -d systems/srfi ]; then
-    bzr checkout --lightweight \
-        lp:~scheme-libraries-team/scheme-libraries/srfi systems/srfi
-fi
-for system in wak-common wak-prometheus; do
+for system in wak-common wak-irregex wak-fmt wak-syn-param wak-foof-loop wak-prometheus; do
     if [ ! -d systems/$system ]; then
         git clone git://gitorious.org/wak/$system.git systems/$system
     fi
 done
-for system in spells conjure; do
+for system in srfi spells conjure; do
     if [ ! -d systems/$system ]; then
         git clone git://github.com/rotty/$system.git systems/$system
     fi
