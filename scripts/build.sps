@@ -104,7 +104,7 @@
 (define (packages->projects pathname parent)
   (call-with-input-file (->namestring pathname)
     (lambda (port)
-      (filter-map
+      (append-map
        (lambda (form)
          (match form
            (('package name clauses ___)
@@ -116,10 +116,20 @@
               (modify-object! project
                 (dependencies (map package-task-name
                                    (alist-rhsides clauses 'depends))))
-              project))
+              (cons project
+                    (provided-tasks project
+                                    (alist-rhsides clauses 'provides)))))
            (_
-            #f)))
+            '())))
        (port->sexps port)))))
+
+(define (provided-tasks provider-project provides)
+  (map (lambda (provide)
+         (<ordinary-task> 'new
+                          (package-task-name (list provide))
+                          '()
+                          `((depends ,(provider-project 'name)))))
+       provides))
 
 (define (port->sexps port)
   (unfold eof-object? values (lambda (seed) (read port)) (read port)))
