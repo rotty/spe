@@ -110,7 +110,7 @@ case "$1" in
     pull)
         shift
         $run_r6rs_script systems/conjure/scripts/rcs42.sps pull "$@"
-        $symlink "$impl"
+        $symlink
         $run_r6rs_script scripts/build.sps
         ;;
     push)
