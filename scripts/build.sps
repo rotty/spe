@@ -55,6 +55,7 @@
   (->pathname
    (case (scheme-implementation)
      ((mzscheme) '(("plt-r6rs")))
+     ((guile)    '(("guile-r6rs")))
      (else       '(("r6rs-libs"))))))
 
 (define (make-triggered-delegator obj triggers thunk)

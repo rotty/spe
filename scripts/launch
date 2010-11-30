@@ -78,6 +78,12 @@ case "$impl" in
         run_r6rs_script="mosh"
         repl="$rlwrap mosh"
         ;;
+    guile)
+        export GUILE_LOAD_PATH="`pwd`/guile-r6rs"
+        run_r6rs_script="guile -x .guile.sls -x .sls -s"
+        repl="guile -l scripts/guile-config.scm"
+        symlink="make_symlinks guile-r6rs --exclude srfi"
+        ;;
     *)
         echo "Unsupported implementation '$impl'; patches welcome ;-)"
         exit 1
