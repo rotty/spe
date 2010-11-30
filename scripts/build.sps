@@ -29,6 +29,7 @@
         (rnrs eval)
         (except (srfi :1 lists) for-each map)
         (srfi :39 parameters)
+        (wak foof-loop)
         (wak prometheus)
         (wak fmt)
         (spells match)
@@ -40,7 +41,8 @@
         (conjure utils)
         (conjure base)
         (conjure task-lib)
-        (conjure dsl))
+        (conjure dsl)
+        (conjure cmd-line))
 
 (define log/spe (make-fmt-log '(spe build)))
 
@@ -134,19 +136,24 @@
 (define (port->sexps port)
   (unfold eof-object? values (lambda (seed) (read port)) (read port)))
 
-(define-project spe-project
-    ((product-dir product-dir))
-  (directory-fold
-   '(("systems"))
-   (lambda (pathname state)
-     state ;ignored
-     (let ((pkg-list (pathname-with-file (pathname-as-directory pathname)
-                                         "pkg-list.scm")))
-       (when (file-exists? pkg-list)
-         (for-each (lambda (task) ((current-project) 'add-task task))
-                   (packages->projects pkg-list (current-project)))))
-     #f)
-   #f))
+(define (populate-project top-project)
+  (let ((systems-dir (->pathname '(("systems")))))
+    (define (directory-packages entry)
+      (let ((pkg-list (merge-pathnames
+                       (make-pathname #f (list entry) "pkg-list.scm")
+                       systems-dir)))
+        (if (file-exists? pkg-list)
+            (packages->projects pkg-list top-project)
+            '())))
+    (let ((projects
+           (loop ((for entry (in-directory systems-dir))
+                  (for result (appending-reverse (directory-packages entry))))
+             => (reverse result))))
+      (top-project 'add-task (object (<task>)
+                               (name 'all)
+                               (dependencies projects)))
+      (for-each (lambda (project) (top-project 'add-task project))
+                projects))))
 
 (define (main argv)
   (register-builtin-tasks)
@@ -157,12 +164,14 @@
           (handlers
            ,(lambda (entry)
               (default-log-formatter entry (current-output-port)))))))
-    (spe-project 'invoke (cdr argv))))
+    (let ((top-project (project spe-project ((product-dir product-dir))
+                         (populate-project (current-project)))))
+      (command-line-ui top-project (cdr argv)))))
 
 (main (command-line))
 
 ;; Local Variables:
-;; scheme-indent-styles: (conjure-dsl as-match
+;; scheme-indent-styles: (conjure-dsl as-match foof-loop
 ;;                        (let-logger-properties 1)
 ;;                        (modify-object! 1)
 ;;                        (object 1))
