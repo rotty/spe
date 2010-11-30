@@ -123,10 +123,6 @@ case "$1" in
         shift
         $run_r6rs_script systems/conjure/scripts/rcs42.sps push "$@"
         ;;
-    dist)
-        shift
-        $run_r6rs_script systems/conjure/scripts/rcs42.sps dist "$@"
-        ;;
     diff)
         shift
         $run_r6rs_script systems/conjure/scripts/rcs42.sps diff "$@"
