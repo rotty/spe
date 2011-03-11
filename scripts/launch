@@ -2,7 +2,7 @@
 
 # launch --- A launcher script for several R6RS implementations
 
-# Copyright (C) 2009, 2010 Andreas Rottmann <a.rottmann@gmx.at>
+# Copyright (C) 2009, 2010, 2011 Andreas Rottmann <a.rottmann@gmx.at>
 
 # This program is free software, you can redistribute it and/or
 # modify it under the terms of the new-style BSD license.
@@ -81,7 +81,7 @@ case "$impl" in
     guile)
         export GUILE_LOAD_PATH="`pwd`/guile-r6rs"
         run_r6rs_script="guile -x .guile.sls -x .sls -s"
-        repl="guile -l scripts/guile-config.scm"
+        repl="guile -x .guile.sls -x .sls"
         symlink="make_symlinks guile-r6rs --exclude srfi"
         ;;
     *)
