@@ -25,6 +25,11 @@ clean_symlink_tree() {
 make_symlinks() {
     local dir="$1"; shift
     clean_symlink_tree "$dir"
+    if ! command -v doro > /dev/null; then
+        echo "ERROR: 'doro' command not found, please install dorodango."
+        echo "See http://home.gna.org/dorodango/manual/#installation for details"
+        exit 1
+    fi
     doro --no-config symlink-bundle --force "$@" systems "$dir"
 }
 
@@ -85,7 +90,7 @@ case "$impl" in
         symlink="make_symlinks guile-r6rs --exclude srfi"
         ;;
     *)
-        echo "Unsupported implementation '$impl'; patches welcome ;-)"
+        echo "ERROR: Unsupported implementation '$impl'; patches welcome ;-)"
         exit 1
         ;;
 esac
