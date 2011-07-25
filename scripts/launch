@@ -63,10 +63,10 @@ case "$impl" in
         run_r6rs_script="ikarus --r6rs-script"
         repl="$rlwrap ikarus"
         ;;
-    mzscheme)
+    mzscheme|racket)
         export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/plt-r6rs"
         run_r6rs_script="plt-r6rs"
-        repl="$rlwrap mzscheme -i"
+        repl="$rlwrap racket -i"
         symlink="make_symlinks plt-r6rs --exclude srfi"
         ;;
     ypsilon)
