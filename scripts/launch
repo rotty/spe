@@ -96,9 +96,10 @@ case "$impl" in
 esac
 
 if [ $# -eq 0 ]; then
-    $repl
-    exit 0
+    exec $repl
 fi
+
+exec_r6rs_script="exec $run_r6rs_script"
 
 # command dispatcher
 
@@ -110,34 +111,34 @@ case "$1" in
     build)
         shift
         $symlink
-        $run_r6rs_script scripts/build.sps "$@"
+        $exec_r6rs_script scripts/build.sps "$@"
         ;;
     test)
         shift
         test_file="systems/$1/tests/tests.scm"
         shift
-        $run_r6rs_script scripts/run-tests.sps "$test_file" "$@"
+        $exec_r6rs_script scripts/run-tests.sps "$test_file" "$@"
         ;;
     pull)
         shift
         $run_r6rs_script systems/conjure/scripts/rcs42.sps pull "$@"
         $symlink
-        $run_r6rs_script scripts/build.sps
+        $exec_r6rs_script scripts/build.sps
         ;;
     push)
         shift
-        $run_r6rs_script systems/conjure/scripts/rcs42.sps push "$@"
+        $exec_r6rs_script systems/conjure/scripts/rcs42.sps push "$@"
         ;;
     diff)
         shift
-        $run_r6rs_script systems/conjure/scripts/rcs42.sps diff "$@"
+        $exec_r6rs_script systems/conjure/scripts/rcs42.sps diff "$@"
         ;;
     make-doc)
         rm -f doc/html/system-reference/*.*.html doc/html/system-reference/index.html
-        $run_r6rs_script systems/stexidoc/scripts/make-doc.sps \
+        $exec_r6rs_script systems/stexidoc/scripts/make-doc.sps \
             "SPE system reference" doc/html/system-reference systems/*/sys-def.scm
         ;;
     *)
-        $run_r6rs_script "$@"
+        $exec_r6rs_script "$@"
         ;;
 esac
