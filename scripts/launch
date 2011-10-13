@@ -51,6 +51,7 @@ else
     rlwrap=""
 fi
 
+topdir="$(dirname $0)/.."
 
 # A reasonable default
 symlink="make_symlinks r6rs-libs"
@@ -59,32 +60,32 @@ symlink="make_symlinks r6rs-libs"
 impl="$1"; shift
 case "$impl" in
     ikarus)
-        export IKARUS_LIBRARY_PATH="`pwd`/r6rs-libs:$IKARUS_LIBRARY_PATH"
+        export IKARUS_LIBRARY_PATH="${topdir}/r6rs-libs:$IKARUS_LIBRARY_PATH"
         run_r6rs_script="ikarus --r6rs-script"
         repl="$rlwrap ikarus"
         ;;
     mzscheme|racket)
-        export PLTCOLLECTS=":$PLTCOLLECTS:`pwd`/plt-r6rs"
+        export PLTCOLLECTS=":$PLTCOLLECTS:${topdir}/plt-r6rs"
         run_r6rs_script="plt-r6rs"
         repl="$rlwrap racket -i"
         symlink="make_symlinks plt-r6rs --exclude srfi"
         ;;
     ypsilon)
-        export YPSILON_SITELIB="`pwd`/r6rs-libs:$YPSILON_SITELIB"
+        export YPSILON_SITELIB="${topdir}/r6rs-libs:$YPSILON_SITELIB"
         run_r6rs_script="ypsilon --r6rs"
         repl="$rlwrap ypsilon"
         ;;
     larceny)
-        run_r6rs_script="larceny -r6rs -path `pwd`/r6rs-libs -program"
-        repl="$rlwrap larceny -path `pwd`/r6rs-libs -err5rs"
+        run_r6rs_script="larceny -r6rs -path ${topdir}/r6rs-libs -program"
+        repl="$rlwrap larceny -path ${topdir}/r6rs-libs -err5rs"
         ;;
     mosh)
-        export MOSH_LOADPATH="`pwd`/r6rs-libs"
+        export MOSH_LOADPATH="${topdir}/r6rs-libs"
         run_r6rs_script="mosh"
         repl="$rlwrap mosh"
         ;;
     guile)
-        export GUILE_LOAD_PATH="`pwd`/guile-r6rs"
+        export GUILE_LOAD_PATH="${topdir}/guile-r6rs"
         run_r6rs_script="guile -x .guile.sls -x .sls -s"
         repl="guile -x .guile.sls -x .sls"
         symlink="make_symlinks guile-r6rs --exclude srfi"
