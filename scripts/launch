@@ -51,7 +51,7 @@ else
     rlwrap=""
 fi
 
-topdir="$(dirname $0)/.."
+topdir="$(readlink -f $(dirname $0)/..)"
 
 # A reasonable default
 symlink="make_symlinks r6rs-libs"
