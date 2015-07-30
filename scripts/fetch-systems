@@ -23,7 +23,7 @@ echo "= Getting base systems"
 
 for system in wak-common wak-irregex wak-fmt wak-syn-param wak-foof-loop wak-prometheus; do
     if [ ! -d systems/$system ]; then
-        git clone git://gitorious.org/wak/$system.git systems/$system
+        git clone https://gitlab.com/wak/$system.git systems/$system
     fi
 done
 for system in srfi spells conjure; do
