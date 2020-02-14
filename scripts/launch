@@ -27,7 +27,7 @@ make_symlinks() {
     clean_symlink_tree "$dir"
     if ! command -v doro > /dev/null; then
         echo "ERROR: 'doro' command not found, please install dorodango."
-        echo "See http://home.gna.org/dorodango/manual/#installation for details"
+        echo "See https://r0tty.org/software/dorodango/manual/#installation for details"
         exit 1
     fi
     doro --no-config symlink-bundle --force "$@" systems "$dir"
